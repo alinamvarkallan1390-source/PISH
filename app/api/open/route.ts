@@ -9,13 +9,13 @@ export async function POST(req: Request) {
     const handle = str(body.handle, 40).trim().replace(/^@/, "").toLowerCase();
     if (!handle) throw new HttpError(400, "آیدی را وارد کنید");
 
-    const bot = await q1<any>(`SELECT * FROM nexora.bots WHERE username = $1`, [handle]);
+    const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE username = $1`, [handle]);
     if (bot) {
       const chat = await openBotChat(user.id, bot.id);
       return { ok: true, chat_id: chat.id, kind: "bot" };
     }
 
-    const person = await q1<any>(`SELECT * FROM nexora.users WHERE username = $1`, [handle]);
+    const person = await q1<any>(`SELECT * FROM nexora_msg.users WHERE username = $1`, [handle]);
     if (person) {
       if (person.id === user.id) throw new HttpError(400, "این آیدی مربوط به خودتان است");
       const chat = await openPrivateChat(user.id, person.id);
@@ -23,12 +23,12 @@ export async function POST(req: Request) {
     }
 
     const pub = await q1<any>(
-      `SELECT * FROM nexora.chats WHERE username = $1 AND type IN ('group','channel')`,
+      `SELECT * FROM nexora_msg.chats WHERE username = $1 AND type IN ('group','channel')`,
       [handle]
     );
     if (pub) {
       await q(
-        `INSERT INTO nexora.chat_members (chat_id, user_id, role) VALUES ($1,$2,'member')
+        `INSERT INTO nexora_msg.chat_members (chat_id, user_id, role) VALUES ($1,$2,'member')
          ON CONFLICT (chat_id, user_id) DO NOTHING`,
         [pub.id, user.id]
       );

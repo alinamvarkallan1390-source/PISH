@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       const member = await assertMember(toId, user.id);
       if (chat.type === "channel" && member.role === "member") continue;
       for (const mid of messageIds) {
-        const src = await q1<any>(`SELECT * FROM nexora.messages WHERE id = $1`, [mid]);
+        const src = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1`, [mid]);
         if (!src || src.deleted) continue;
         await sendMessage({
           chatId: toId,

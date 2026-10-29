@@ -26,7 +26,7 @@ export async function GET(req: Request) {
         if (chat.type === "private") {
           const { q1 } = await import("@/lib/db");
           const peer = await q1<any>(
-            `SELECT last_read_seq::text AS s FROM nexora.chat_members WHERE chat_id = $1 AND user_id <> $2 LIMIT 1`,
+            `SELECT last_read_seq::text AS s FROM nexora_msg.chat_members WHERE chat_id = $1 AND user_id <> $2 LIMIT 1`,
             [chatId, user.id]
           );
           peerReadSeq = Number(peer?.s ?? 0);

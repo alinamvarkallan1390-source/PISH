@@ -10,11 +10,11 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
   return withUser(async (user) => {
-    const msg = await q1<any>(`SELECT * FROM nexora.messages WHERE id = $1`, [id]);
+    const msg = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1`, [id]);
     if (!msg) throw new HttpError(404, "پیام پیدا نشد");
     await assertMember(msg.chat_id, user.id);
-    const chat = await q1<any>(`SELECT * FROM nexora.chats WHERE id = $1`, [msg.chat_id]);
-    const bot = chat?.bot_id ? await q1<any>(`SELECT * FROM nexora.bots WHERE id = $1`, [chat.bot_id]) : null;
+    const chat = await q1<any>(`SELECT * FROM nexora_msg.chats WHERE id = $1`, [msg.chat_id]);
+    const bot = chat?.bot_id ? await q1<any>(`SELECT * FROM nexora_msg.bots WHERE id = $1`, [chat.bot_id]) : null;
     if (!bot) throw new HttpError(400, "این پیام مربوط به ربات نیست");
 
     const body = await readJson(req);

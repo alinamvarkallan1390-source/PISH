@@ -6,7 +6,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_req: Request, { params }: Params) {
   const { id } = await params;
   await ensureReady();
-  const row = await q1<any>(`SELECT mime, name, data FROM nexora.media WHERE id = $1`, [id]);
+  const row = await q1<any>(`SELECT mime, name, data FROM nexora_msg.media WHERE id = $1`, [id]);
   if (!row) return new Response("not found", { status: 404 });
 
   let data: any = row.data;

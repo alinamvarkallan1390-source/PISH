@@ -29,14 +29,14 @@ export async function sendMessage(opts: SendOptions) {
   let replyToId = opts.replyToId || null;
   if (replyToId) {
     const target = await q1<any>(
-      `SELECT id FROM nexora.messages WHERE id = $1 AND chat_id = $2`,
+      `SELECT id FROM nexora_msg.messages WHERE id = $1 AND chat_id = $2`,
       [replyToId, opts.chatId]
     );
     if (!target) replyToId = null;
   }
 
   await q(
-    `INSERT INTO nexora.messages (id, chat_id, sender_id, sender_bot_id, kind, text, media_id, reply_to_id, forward_from, meta, created_at)
+    `INSERT INTO nexora_msg.messages (id, chat_id, sender_id, sender_bot_id, kind, text, media_id, reply_to_id, forward_from, meta, created_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, COALESCE($11::timestamptz, now()))`,
     [
       id,
@@ -55,7 +55,7 @@ export async function sendMessage(opts: SendOptions) {
 
   if (opts.senderId) {
     await q(
-      `UPDATE nexora.chat_members SET last_read_seq = (SELECT COALESCE(max(seq),0) FROM nexora.messages WHERE chat_id = $1)
+      `UPDATE nexora_msg.chat_members SET last_read_seq = (SELECT COALESCE(max(seq),0) FROM nexora_msg.messages WHERE chat_id = $1)
         WHERE chat_id = $1 AND user_id = $2`,
       [opts.chatId, opts.senderId]
     );
@@ -65,7 +65,7 @@ export async function sendMessage(opts: SendOptions) {
 
   // Deliver to bots
   if (chat.type === "bot" && opts.senderId && !opts.botId) {
-    const bot = await q1<any>(`SELECT * FROM nexora.bots WHERE id = $1`, [chat.bot_id]);
+    const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE id = $1`, [chat.bot_id]);
     if (bot) {
       if (bot.is_builtin) {
         void builtinReply(bot, opts.chatId, text, message);
@@ -92,13 +92,13 @@ export async function sendBotMessage(opts: {
   replyToId?: string | null;
   meta?: any;
 }) {
-  const bot = await q1<any>(`SELECT * FROM nexora.bots WHERE id = $1`, [opts.botId]);
+  const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE id = $1`, [opts.botId]);
   if (!bot) throw new HttpError(401, "توکن ربات نامعتبر است");
 
   let chatId = opts.chatId;
   if (!chatId && opts.userId) {
     const found = await q1<any>(
-      `SELECT c.id FROM nexora.chats c JOIN nexora.chat_members m ON m.chat_id = c.id AND m.user_id = $2
+      `SELECT c.id FROM nexora_msg.chats c JOIN nexora_msg.chat_members m ON m.chat_id = c.id AND m.user_id = $2
         WHERE c.type = 'bot' AND c.bot_id = $1 LIMIT 1`,
       [bot.id, opts.userId]
     );
@@ -106,12 +106,12 @@ export async function sendBotMessage(opts: {
     else {
       chatId = crypto.randomUUID();
       await q(
-        `INSERT INTO nexora.chats (id, type, title, avatar_emoji, avatar_color, bot_id)
+        `INSERT INTO nexora_msg.chats (id, type, title, avatar_emoji, avatar_color, bot_id)
          VALUES ($1,'bot',$2,'🤖','#06b6d4',$3)`,
         [chatId, bot.name, bot.id]
       );
       await q(
-        `INSERT INTO nexora.chat_members (chat_id, user_id, role) VALUES ($1,$2,'member')`,
+        `INSERT INTO nexora_msg.chat_members (chat_id, user_id, role) VALUES ($1,$2,'member')`,
         [chatId, opts.userId]
       );
     }
@@ -132,12 +132,12 @@ export async function sendBotMessage(opts: {
 export async function dispatchBotUpdate(bot: any, payload: any) {
   try {
     const nextId = await q1<any>(
-      `SELECT COALESCE(max(id),0)::text AS n FROM nexora.bot_updates`
+      `SELECT COALESCE(max(id),0)::text AS n FROM nexora_msg.bot_updates`
     );
     const updateId = Number(nextId?.n ?? 0) + 1;
     const update = { update_id: updateId, ...payload };
     await q(
-      `INSERT INTO nexora.bot_updates (bot_id, payload) VALUES ($1,$2)`,
+      `INSERT INTO nexora_msg.bot_updates (bot_id, payload) VALUES ($1,$2)`,
       [bot.id, JSON.stringify(update)]
     );
     if (bot.webhook_url) {
@@ -165,7 +165,7 @@ export async function dispatchBotUpdate(bot: any, payload: any) {
 export async function markRead(chatId: string, userId: string) {
   const seq = await lastSeq(chatId);
   await q(
-    `UPDATE nexora.chat_members SET last_read_seq = GREATEST(last_read_seq, $3)
+    `UPDATE nexora_msg.chat_members SET last_read_seq = GREATEST(last_read_seq, $3)
       WHERE chat_id = $1 AND user_id = $2`,
     [chatId, userId, seq]
   );
@@ -174,27 +174,27 @@ export async function markRead(chatId: string, userId: string) {
 
 export async function setTyping(chatId: string, userId: string) {
   await q(
-    `INSERT INTO nexora.typing (chat_id, user_id, until) VALUES ($1,$2, now() + interval '6 seconds')
+    `INSERT INTO nexora_msg.typing (chat_id, user_id, until) VALUES ($1,$2, now() + interval '6 seconds')
      ON CONFLICT (chat_id, user_id) DO UPDATE SET until = now() + interval '6 seconds'`,
     [chatId, userId]
   );
 }
 
 export async function toggleReaction(messageId: string, userId: string, emoji: string) {
-  const msg = await q1<any>(`SELECT * FROM nexora.messages WHERE id = $1`, [messageId]);
+  const msg = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1`, [messageId]);
   if (!msg) throw new HttpError(404, "پیام پیدا نشد");
   const existing = await q1<any>(
-    `SELECT 1 FROM nexora.reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
+    `SELECT 1 FROM nexora_msg.reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
     [messageId, userId, emoji]
   );
   if (existing) {
     await q(
-      `DELETE FROM nexora.reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
+      `DELETE FROM nexora_msg.reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
       [messageId, userId, emoji]
     );
   } else {
     await q(
-      `INSERT INTO nexora.reactions (message_id, user_id, emoji) VALUES ($1,$2,$3)
+      `INSERT INTO nexora_msg.reactions (message_id, user_id, emoji) VALUES ($1,$2,$3)
        ON CONFLICT DO NOTHING`,
       [messageId, userId, emoji]
     );

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (username) {
       if (!/^[a-z0-9_]{4,32}$/.test(username))
         throw new HttpError(400, "آیدی عمومی باید ۴ تا ۳۲ کاراکتر انگلیسی باشد");
-      const taken = await q(`SELECT 1 FROM nexora.chats WHERE username = $1`, [username]);
+      const taken = await q(`SELECT 1 FROM nexora_msg.chats WHERE username = $1`, [username]);
       if (taken.length) throw new HttpError(409, "این آیدی عمومی قبلاً استفاده شده است");
     }
 

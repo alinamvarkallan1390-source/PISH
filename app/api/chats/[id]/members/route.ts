@@ -20,14 +20,14 @@ export async function POST(req: Request, { params }: Params) {
     const ids: string[] = Array.isArray(body.user_ids) ? body.user_ids.slice(0, 100) : [];
     const username = str(body.username, 32).trim().replace(/^@/, "");
     if (username) {
-      const found = await q1<any>(`SELECT id FROM nexora.users WHERE username = $1`, [username.toLowerCase()]);
+      const found = await q1<any>(`SELECT id FROM nexora_msg.users WHERE username = $1`, [username.toLowerCase()]);
       if (!found) throw new HttpError(404, "کاربری با این نام کاربری پیدا نشد");
       ids.push(found.id);
     }
     if (!ids.length) throw new HttpError(400, "کاربری انتخاب نشده است");
     for (const uid of ids) {
       await q(
-        `INSERT INTO nexora.chat_members (chat_id, user_id, role) VALUES ($1,$2,'member')
+        `INSERT INTO nexora_msg.chat_members (chat_id, user_id, role) VALUES ($1,$2,'member')
          ON CONFLICT (chat_id, user_id) DO NOTHING`,
         [id, uid]
       );
@@ -45,7 +45,7 @@ export async function DELETE(req: Request, { params }: Params) {
     if (!targetId) throw new HttpError(400, "کاربر مشخص نیست");
     if (targetId !== user.id && me.role !== "owner" && me.role !== "admin")
       throw new HttpError(403, "دسترسی ندارید");
-    await q(`DELETE FROM nexora.chat_members WHERE chat_id = $1 AND user_id = $2`, [id, targetId]);
+    await q(`DELETE FROM nexora_msg.chat_members WHERE chat_id = $1 AND user_id = $2`, [id, targetId]);
     return { ok: true, members: await chatMembers(id) };
   });
 }

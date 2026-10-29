@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const id = crypto.randomUUID();
     const mime = file.type || "application/octet-stream";
     await q(
-      `INSERT INTO nexora.media (id, owner_id, mime, name, size, data) VALUES ($1,$2,$3,$4,$5,$6)`,
+      `INSERT INTO nexora_msg.media (id, owner_id, mime, name, size, data) VALUES ($1,$2,$3,$4,$5,$6)`,
       [id, user.id, mime, file.name || "file", file.size, buf]
     );
     return { ok: true, id, url: `/api/media/${id}`, mime, size: file.size, name: file.name };

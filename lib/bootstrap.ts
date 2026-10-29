@@ -62,7 +62,7 @@ async function boot() {
 }
 
 async function seed() {
-  const existing = await q(`SELECT count(*)::int AS n FROM nexora.users`);
+  const existing = await q(`SELECT count(*)::int AS n FROM nexora_msg.users`);
   if (Number(existing[0]?.n ?? 0) > 0) return;
 
   const pw = hashPassword("nexora123");
@@ -74,14 +74,14 @@ async function seed() {
   ];
   for (const [id, username, name, emoji, color, bio] of users) {
     await q(
-      `INSERT INTO nexora.users (id, username, display_name, password_hash, avatar_emoji, avatar_color, bio)
+      `INSERT INTO nexora_msg.users (id, username, display_name, password_hash, avatar_emoji, avatar_color, bio)
        VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING`,
       [id, username, name, pw, emoji, color, bio]
     );
   }
 
   await q(
-    `INSERT INTO nexora.users (id, username, display_name, password_hash, avatar_emoji, avatar_color, bio)
+    `INSERT INTO nexora_msg.users (id, username, display_name, password_hash, avatar_emoji, avatar_color, bio)
      VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (username) DO NOTHING`,
     [
       "55555555-5555-4555-8555-555555555555",
@@ -96,7 +96,7 @@ async function seed() {
 
   // Bots
   await q(
-    `INSERT INTO nexora.bots (id, owner_id, username, name, token, description, about, commands, is_builtin)
+    `INSERT INTO nexora_msg.bots (id, owner_id, username, name, token, description, about, commands, is_builtin)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) ON CONFLICT (id) DO NOTHING`,
     [
       B.assistant,
@@ -115,7 +115,7 @@ async function seed() {
     ]
   );
   await q(
-    `INSERT INTO nexora.bots (id, owner_id, username, name, token, description, about, commands, is_builtin)
+    `INSERT INTO nexora_msg.bots (id, owner_id, username, name, token, description, about, commands, is_builtin)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) ON CONFLICT (id) DO NOTHING`,
     [
       B.echo,
@@ -136,7 +136,7 @@ async function seed() {
   ];
   for (const [id, type, title, emoji, color, username, owner, isPublic, bio] of chats) {
     await q(
-      `INSERT INTO nexora.chats (id, type, title, avatar_emoji, avatar_color, username, owner_id, is_public, bio)
+      `INSERT INTO nexora_msg.chats (id, type, title, avatar_emoji, avatar_color, username, owner_id, is_public, bio)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO NOTHING`,
       [id, type, title, emoji, color, username, owner, isPublic, bio]
     );
@@ -146,13 +146,13 @@ async function seed() {
     [C.aliReza, null, "🐧", "#22c55e"],
   ] as any[]) {
     await q(
-      `INSERT INTO nexora.chats (id, type, title, avatar_emoji, avatar_color, owner_id)
+      `INSERT INTO nexora_msg.chats (id, type, title, avatar_emoji, avatar_color, owner_id)
        VALUES ($1,'private',$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
       [id, title, emoji, color, U.ali]
     );
   }
   await q(
-    `INSERT INTO nexora.chats (id, type, title, avatar_emoji, avatar_color, bot_id, is_public)
+    `INSERT INTO nexora_msg.chats (id, type, title, avatar_emoji, avatar_color, bot_id, is_public)
      VALUES ($1,'bot',$2,'🤖','#06b6d4',$3,false) ON CONFLICT (id) DO NOTHING`,
     [C.aliBot, "دستیار نکسورا", B.assistant]
   );
@@ -175,7 +175,7 @@ async function seed() {
   ];
   for (const [chat, user, role] of memberRows) {
     await q(
-      `INSERT INTO nexora.chat_members (chat_id, user_id, role) VALUES ($1,$2,$3)
+      `INSERT INTO nexora_msg.chat_members (chat_id, user_id, role) VALUES ($1,$2,$3)
        ON CONFLICT (chat_id, user_id) DO NOTHING`,
       [chat, user, role]
     );
@@ -193,7 +193,7 @@ async function seed() {
     extra: { kind?: string; meta?: any } = {}
   ) => {
     await q(
-      `INSERT INTO nexora.messages (id, chat_id, sender_id, sender_bot_id, text, kind, meta, created_at)
+      `INSERT INTO nexora_msg.messages (id, chat_id, sender_id, sender_bot_id, text, kind, meta, created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7, now() - ($8 || ' minutes')::interval)
        ON CONFLICT (id) DO NOTHING`,
       [id, chat, sender, bot, text, extra.kind ?? "text", JSON.stringify(extra.meta ?? {}), String(minutesAgo)]
@@ -217,13 +217,13 @@ async function seed() {
   });
 
   await q(
-    `UPDATE nexora.chat_members SET last_read_seq = COALESCE((SELECT max(seq) FROM nexora.messages WHERE chat_id = $1), 0)
+    `UPDATE nexora_msg.chat_members SET last_read_seq = COALESCE((SELECT max(seq) FROM nexora_msg.messages WHERE chat_id = $1), 0)
      WHERE chat_id = $1`,
     [C.team]
   );
 
-  await q(`UPDATE nexora.users SET last_seen = now() - interval '2 minutes' WHERE id <> $1`, [U.ali]);
-  await q(`UPDATE nexora.users SET last_seen = now() WHERE id = $1`, [U.ali]);
+  await q(`UPDATE nexora_msg.users SET last_seen = now() - interval '2 minutes' WHERE id <> $1`, [U.ali]);
+  await q(`UPDATE nexora_msg.users SET last_seen = now() WHERE id = $1`, [U.ali]);
 }
 
 export const DEMO = { U, C, B };

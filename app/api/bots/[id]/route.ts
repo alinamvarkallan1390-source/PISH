@@ -4,7 +4,7 @@ import { HttpError, readJson, str, withUser } from "@/lib/http";
 type Params = { params: Promise<{ id: string }> };
 
 async function ownBot(id: string, userId: string) {
-  const bot = await q1<any>(`SELECT * FROM nexora.bots WHERE id = $1`, [id]);
+  const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE id = $1`, [id]);
   if (!bot) throw new HttpError(404, "ربات پیدا نشد");
   if (bot.owner_id !== userId) throw new HttpError(403, "این ربات متعلق به شما نیست");
   return bot;
@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const body = await readJson(req);
     const commands = Array.isArray(body.commands) ? body.commands.slice(0, 30) : null;
     await q(
-      `UPDATE nexora.bots SET
+      `UPDATE nexora_msg.bots SET
          name = COALESCE(NULLIF($2,''), name),
          description = COALESCE($3, description),
          about = COALESCE($4, about),
@@ -35,7 +35,7 @@ export async function PATCH(req: Request, { params }: Params) {
         commands ? JSON.stringify(commands) : null,
       ]
     );
-    const bot = await q1<any>(`SELECT * FROM nexora.bots WHERE id = $1`, [id]);
+    const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE id = $1`, [id]);
     return { ok: true, bot };
   });
 }
@@ -45,9 +45,9 @@ export async function DELETE(_req: Request, { params }: Params) {
   return withUser(async (user) => {
     const bot = await ownBot(id, user.id);
     if (bot.is_builtin) throw new HttpError(403, "ربات‌های رسمی قابل حذف نیستند");
-    await q(`DELETE FROM nexora.chats WHERE bot_id = $1`, [id]);
-    await q(`DELETE FROM nexora.bot_updates WHERE bot_id = $1`, [id]);
-    await q(`DELETE FROM nexora.bots WHERE id = $1`, [id]);
+    await q(`DELETE FROM nexora_msg.chats WHERE bot_id = $1`, [id]);
+    await q(`DELETE FROM nexora_msg.bot_updates WHERE bot_id = $1`, [id]);
+    await q(`DELETE FROM nexora_msg.bots WHERE id = $1`, [id]);
     return { ok: true };
   });
 }

@@ -45,10 +45,10 @@ export async function builtinReply(bot: any, chatId: string, rawText: string, in
       return;
     case "stats": {
       const s = await q1<any>(
-        `SELECT (SELECT count(*)::int FROM nexora.users) AS users,
-                (SELECT count(*)::int FROM nexora.chats) AS chats,
-                (SELECT count(*)::int FROM nexora.messages) AS messages,
-                (SELECT count(*)::int FROM nexora.bots) AS bots`
+        `SELECT (SELECT count(*)::int FROM nexora_msg.users) AS users,
+                (SELECT count(*)::int FROM nexora_msg.chats) AS chats,
+                (SELECT count(*)::int FROM nexora_msg.messages) AS messages,
+                (SELECT count(*)::int FROM nexora_msg.bots) AS bots`
       );
       await reply(
         `📊 آمار زندهٔ نکسورا\n\n👤 کاربران: ${fa(Number(s?.users ?? 0))}\n💬 گفتگوها: ${fa(

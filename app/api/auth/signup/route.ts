@@ -16,14 +16,14 @@ export async function POST(req: Request) {
       return fail(400, "نام کاربری باید ۳ تا ۲۴ کاراکتر و شامل حروف انگلیسی، عدد یا _ باشد");
     if (password.length < 6) return fail(400, "رمز عبور باید حداقل ۶ کاراکتر باشد");
 
-    const exists = await q1(`SELECT 1 FROM nexora.users WHERE username = $1`, [username]);
+    const exists = await q1(`SELECT 1 FROM nexora_msg.users WHERE username = $1`, [username]);
     if (exists) return fail(409, "این نام کاربری قبلاً گرفته شده است");
 
     const avatars = ["🦊", "🦋", "🐧", "🌙", "🚀", "🐳", "🦉", "🌟", "🔥", "🍀", "🎧", "🧊"];
     const colors = ["#6366f1", "#ec4899", "#22c55e", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444"];
     const id = crypto.randomUUID();
     await q(
-      `INSERT INTO nexora.users (id, username, display_name, password_hash, avatar_emoji, avatar_color, bio)
+      `INSERT INTO nexora_msg.users (id, username, display_name, password_hash, avatar_emoji, avatar_color, bio)
        VALUES ($1,$2,$3,$4,$5,$6,'')`,
       [
         id,

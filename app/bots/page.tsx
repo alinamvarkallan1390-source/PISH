@@ -10,7 +10,7 @@ export default async function BotsPage() {
   await ensureReady();
   const uid = await currentUserId();
   if (!uid) redirect("/login");
-  const user = await q1<any>(`SELECT * FROM nexora.users WHERE id = $1`, [uid]);
+  const user = await q1<any>(`SELECT * FROM nexora_msg.users WHERE id = $1`, [uid]);
   if (!user) redirect("/login");
   return (
     <BotsClient

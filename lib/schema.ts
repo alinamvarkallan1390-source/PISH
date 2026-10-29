@@ -1,6 +1,6 @@
 export const SCHEMA_STATEMENTS: string[] = [
-  `CREATE SCHEMA IF NOT EXISTS nexora`,
-  `CREATE TABLE IF NOT EXISTS nexora.users (
+  `CREATE SCHEMA IF NOT EXISTS nexora_msg`,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.users (
      id uuid PRIMARY KEY,
      username text UNIQUE NOT NULL,
      display_name text NOT NULL,
@@ -15,7 +15,7 @@ export const SCHEMA_STATEMENTS: string[] = [
      last_seen timestamptz NOT NULL DEFAULT now(),
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.chats (
+  `CREATE TABLE IF NOT EXISTS nexora_msg.chats (
      id uuid PRIMARY KEY,
      type text NOT NULL,
      title text,
@@ -28,8 +28,8 @@ export const SCHEMA_STATEMENTS: string[] = [
      is_public boolean NOT NULL DEFAULT false,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.chat_members (
-     chat_id uuid NOT NULL REFERENCES nexora.chats(id) ON DELETE CASCADE,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.chat_members (
+     chat_id uuid NOT NULL REFERENCES nexora_msg.chats(id) ON DELETE CASCADE,
      user_id uuid NOT NULL,
      role text NOT NULL DEFAULT 'member',
      last_read_seq bigint NOT NULL DEFAULT 0,
@@ -38,10 +38,10 @@ export const SCHEMA_STATEMENTS: string[] = [
      joined_at timestamptz NOT NULL DEFAULT now(),
      PRIMARY KEY (chat_id, user_id)
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.messages (
+  `CREATE TABLE IF NOT EXISTS nexora_msg.messages (
      id uuid PRIMARY KEY,
      seq bigint GENERATED ALWAYS AS IDENTITY,
-     chat_id uuid NOT NULL REFERENCES nexora.chats(id) ON DELETE CASCADE,
+     chat_id uuid NOT NULL REFERENCES nexora_msg.chats(id) ON DELETE CASCADE,
      sender_id uuid,
      sender_bot_id uuid,
      kind text NOT NULL DEFAULT 'text',
@@ -55,15 +55,15 @@ export const SCHEMA_STATEMENTS: string[] = [
      meta jsonb NOT NULL DEFAULT '{}'::jsonb,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
-  `CREATE INDEX IF NOT EXISTS messages_chat_seq_idx ON nexora.messages (chat_id, seq)`,
-  `CREATE TABLE IF NOT EXISTS nexora.reactions (
-     message_id uuid NOT NULL REFERENCES nexora.messages(id) ON DELETE CASCADE,
+  `CREATE INDEX IF NOT EXISTS messages_chat_seq_idx ON nexora_msg.messages (chat_id, seq)`,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.reactions (
+     message_id uuid NOT NULL REFERENCES nexora_msg.messages(id) ON DELETE CASCADE,
      user_id uuid NOT NULL,
      emoji text NOT NULL,
      created_at timestamptz NOT NULL DEFAULT now(),
      PRIMARY KEY (message_id, user_id, emoji)
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.media (
+  `CREATE TABLE IF NOT EXISTS nexora_msg.media (
      id uuid PRIMARY KEY,
      owner_id uuid,
      mime text NOT NULL,
@@ -72,7 +72,7 @@ export const SCHEMA_STATEMENTS: string[] = [
      data bytea NOT NULL,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.bots (
+  `CREATE TABLE IF NOT EXISTS nexora_msg.bots (
      id uuid PRIMARY KEY,
      owner_id uuid,
      username text UNIQUE NOT NULL,
@@ -86,20 +86,20 @@ export const SCHEMA_STATEMENTS: string[] = [
      is_builtin boolean NOT NULL DEFAULT false,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.bot_updates (
+  `CREATE TABLE IF NOT EXISTS nexora_msg.bot_updates (
      id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
      bot_id uuid NOT NULL,
      payload jsonb NOT NULL,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
-  `CREATE INDEX IF NOT EXISTS bot_updates_bot_idx ON nexora.bot_updates (bot_id, id)`,
-  `CREATE TABLE IF NOT EXISTS nexora.typing (
+  `CREATE INDEX IF NOT EXISTS bot_updates_bot_idx ON nexora_msg.bot_updates (bot_id, id)`,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.typing (
      chat_id uuid NOT NULL,
      user_id uuid NOT NULL,
      until timestamptz NOT NULL,
      PRIMARY KEY (chat_id, user_id)
    )`,
-  `CREATE TABLE IF NOT EXISTS nexora.stickers (
+  `CREATE TABLE IF NOT EXISTS nexora_msg.stickers (
      id uuid PRIMARY KEY,
      user_id uuid,
      emoji text NOT NULL,

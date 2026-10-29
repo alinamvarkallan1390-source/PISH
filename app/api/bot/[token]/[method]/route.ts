@@ -39,7 +39,7 @@ async function handle(
   payload: any,
   isGet: boolean
 ): Promise<any> {
-  const bot = await q1<any>(`SELECT * FROM nexora.bots WHERE token = $1`, [token]);
+  const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE token = $1`, [token]);
   if (!bot) return botError("Unauthorized: invalid bot token", 401);
 
   const get = (k: string, d: any = undefined) => (payload?.[k] !== undefined ? payload[k] : d);
@@ -49,11 +49,11 @@ async function handle(
     if (!chatId) return null;
     const s = String(chatId);
     if (/^[-]?\d+$/.test(s)) return null;
-    const asChat = await q1<any>(`SELECT id FROM nexora.chats WHERE id = $1`, [s]);
+    const asChat = await q1<any>(`SELECT id FROM nexora_msg.chats WHERE id = $1`, [s]);
     if (asChat) return asChat.id;
-    const asUser = await q1<any>(`SELECT id FROM nexora.users WHERE id = $1`, [s]);
+    const asUser = await q1<any>(`SELECT id FROM nexora_msg.users WHERE id = $1`, [s]);
     if (asUser) return (await openBotChat(asUser.id, bot.id)).id;
-    const byUsername = await q1<any>(`SELECT id FROM nexora.users WHERE username = $1`, [s.replace(/^@/, "")]);
+    const byUsername = await q1<any>(`SELECT id FROM nexora_msg.users WHERE username = $1`, [s.replace(/^@/, "")]);
     if (byUsername) return (await openBotChat(byUsername.id, bot.id)).id;
     return null;
   }
@@ -77,7 +77,7 @@ async function handle(
       const offset = Number(get("offset", 0)) || 0;
       const limit = Math.min(Number(get("limit", 50)) || 50, 100);
       const rows = await q<any>(
-        `SELECT payload FROM nexora.bot_updates
+        `SELECT payload FROM nexora_msg.bot_updates
           WHERE bot_id = $1 AND id >= $2 ORDER BY id ASC LIMIT $3`,
         [bot.id, offset > 0 ? offset : 0, limit]
       );
@@ -107,7 +107,7 @@ async function handle(
       const cid = await resolveChatId();
       if (!cid) return botError("Bad Request: chat not found");
       const mediaId = String(get("photo") ?? get("document") ?? get("voice") ?? "");
-      const exists = await q1<any>(`SELECT id FROM nexora.media WHERE id = $1`, [mediaId]);
+      const exists = await q1<any>(`SELECT id FROM nexora_msg.media WHERE id = $1`, [mediaId]);
       if (!exists) return botError("Bad Request: media not found (upload it first via POST /api/media)");
       const kind = method.toLowerCase() === "sendphoto" ? "photo" : method.toLowerCase() === "sendvoice" ? "voice" : "file";
       const msg = await sendBotMessage({
@@ -137,7 +137,7 @@ async function handle(
       const cid = await resolveChatId();
       if (!cid) return botError("Bad Request: chat not found");
       await q(
-        `INSERT INTO nexora.typing (chat_id, user_id, until) VALUES ($1,$2, now() + interval '6 seconds')
+        `INSERT INTO nexora_msg.typing (chat_id, user_id, until) VALUES ($1,$2, now() + interval '6 seconds')
          ON CONFLICT (chat_id, user_id) DO UPDATE SET until = now() + interval '6 seconds'`,
         [cid, bot.id]
       );
@@ -146,9 +146,9 @@ async function handle(
 
     case "editmessagetext": {
       const mid = String(get("message_id", ""));
-      const msg = await q1<any>(`SELECT * FROM nexora.messages WHERE id = $1 AND sender_bot_id = $2`, [mid, bot.id]);
+      const msg = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1 AND sender_bot_id = $2`, [mid, bot.id]);
       if (!msg) return botError("Bad Request: message to edit not found");
-      await q(`UPDATE nexora.messages SET text = $2, edited_at = now() WHERE id = $1`, [
+      await q(`UPDATE nexora_msg.messages SET text = $2, edited_at = now() WHERE id = $1`, [
         mid,
         String(get("text", "")),
       ]);
@@ -157,7 +157,7 @@ async function handle(
 
     case "deletemessage": {
       const mid = String(get("message_id", ""));
-      await q(`UPDATE nexora.messages SET deleted = true, text = '' WHERE id = $1 AND sender_bot_id = $2`, [
+      await q(`UPDATE nexora_msg.messages SET deleted = true, text = '' WHERE id = $1 AND sender_bot_id = $2`, [
         mid,
         bot.id,
       ]);
@@ -168,7 +168,7 @@ async function handle(
       const url = String(get("url", "") ?? "");
       if (!/^https?:\/\//.test(url)) return botError("Bad Request: invalid webhook url");
       const secret = String(get("secret_token", "") || "");
-      await q(`UPDATE nexora.bots SET webhook_url = $2, webhook_secret = $3 WHERE id = $1`, [
+      await q(`UPDATE nexora_msg.bots SET webhook_url = $2, webhook_secret = $3 WHERE id = $1`, [
         bot.id,
         url,
         secret,
@@ -177,11 +177,11 @@ async function handle(
     }
 
     case "deletewebhook":
-      await q(`UPDATE nexora.bots SET webhook_url = NULL, webhook_secret = NULL WHERE id = $1`, [bot.id]);
+      await q(`UPDATE nexora_msg.bots SET webhook_url = NULL, webhook_secret = NULL WHERE id = $1`, [bot.id]);
       return { result: true };
 
     case "getwebhookinfo": {
-      const fresh = await q1<any>(`SELECT webhook_url, webhook_secret FROM nexora.bots WHERE id = $1`, [bot.id]);
+      const fresh = await q1<any>(`SELECT webhook_url, webhook_secret FROM nexora_msg.bots WHERE id = $1`, [bot.id]);
       return {
         result: {
           url: fresh?.webhook_url ?? "",
@@ -195,7 +195,7 @@ async function handle(
 
     case "setmycommands": {
       const commands = Array.isArray(get("commands", [])) ? get("commands", []) : [];
-      await q(`UPDATE nexora.bots SET commands = $2::jsonb WHERE id = $1`, [
+      await q(`UPDATE nexora_msg.bots SET commands = $2::jsonb WHERE id = $1`, [
         bot.id,
         JSON.stringify(commands.slice(0, 30)),
       ]);
@@ -203,14 +203,14 @@ async function handle(
     }
 
     case "getmycommands": {
-      const fresh = await q1<any>(`SELECT commands FROM nexora.bots WHERE id = $1`, [bot.id]);
+      const fresh = await q1<any>(`SELECT commands FROM nexora_msg.bots WHERE id = $1`, [bot.id]);
       return { result: fresh?.commands ?? [] };
     }
 
     case "getchat": {
       const cid = await resolveChatId();
       if (!cid) return botError("Bad Request: chat not found");
-      const chat = await q1<any>(`SELECT * FROM nexora.chats WHERE id = $1`, [cid]);
+      const chat = await q1<any>(`SELECT * FROM nexora_msg.chats WHERE id = $1`, [cid]);
       const members = chat ? await chatMembers(cid) : [];
       return {
         result: {
@@ -233,7 +233,7 @@ async function handle(
       const uid = String(get("user_id", ""));
       if (!cid) return botError("Bad Request: chat not found");
       const member = await q1<any>(
-        `SELECT role FROM nexora.chat_members WHERE chat_id = $1 AND user_id = $2`,
+        `SELECT role FROM nexora_msg.chat_members WHERE chat_id = $1 AND user_id = $2`,
         [cid, uid]
       );
       return { result: { status: member ? member.role : "left" } };
@@ -242,7 +242,7 @@ async function handle(
     case "forwardmessage": {
       const target = String(get("from_chat_id", "") || "");
       const mid = String(get("message_id", ""));
-      const src = await q1<any>(`SELECT * FROM nexora.messages WHERE id = $1 AND chat_id = $2`, [mid, target]);
+      const src = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1 AND chat_id = $2`, [mid, target]);
       if (!src) return botError("Bad Request: message to forward not found");
       const cid = await resolveChatId();
       if (!cid) return botError("Bad Request: chat not found");
@@ -258,7 +258,7 @@ async function handle(
 
     case "pinchatmessage": {
       const mid = String(get("message_id", ""));
-      await q(`UPDATE nexora.messages SET pinned = true WHERE id = $1`, [mid]);
+      await q(`UPDATE nexora_msg.messages SET pinned = true WHERE id = $1`, [mid]);
       return { result: true };
     }
 
@@ -267,7 +267,7 @@ async function handle(
 
     case "getbotchats": {
       const rows = await q<any>(
-        `SELECT c.id, c.title, c.created_at FROM nexora.chats c WHERE c.bot_id = $1 ORDER BY c.created_at DESC LIMIT 50`,
+        `SELECT c.id, c.title, c.created_at FROM nexora_msg.chats c WHERE c.bot_id = $1 ORDER BY c.created_at DESC LIMIT 50`,
         [bot.id]
       );
       return { result: rows };

@@ -21,10 +21,10 @@ export async function GET() {
       },
       stats: {
         chats: Number(
-          (await q1<any>(`SELECT count(*)::int AS n FROM nexora.chat_members WHERE user_id = $1`, [user.id]))?.n ?? 0
+          (await q1<any>(`SELECT count(*)::int AS n FROM nexora_msg.chat_members WHERE user_id = $1`, [user.id]))?.n ?? 0
         ),
         bots: Number(
-          (await q1<any>(`SELECT count(*)::int AS n FROM nexora.bots WHERE owner_id = $1`, [user.id]))?.n ?? 0
+          (await q1<any>(`SELECT count(*)::int AS n FROM nexora_msg.bots WHERE owner_id = $1`, [user.id]))?.n ?? 0
         ),
       },
     };
@@ -42,7 +42,7 @@ export async function PATCH(req: Request) {
     const phone = body.phone === undefined ? null : str(body.phone, 24);
 
     await q(
-      `UPDATE nexora.users SET
+      `UPDATE nexora_msg.users SET
          display_name = COALESCE(NULLIF($2,''), display_name),
          bio = COALESCE($3, bio),
          avatar_emoji = COALESCE(NULLIF($4,''), avatar_emoji),
@@ -52,7 +52,7 @@ export async function PATCH(req: Request) {
        WHERE id = $1`,
       [user.id, displayName, bio, avatarEmoji, avatarColor, theme, phone]
     );
-    const fresh = await q1<any>(`SELECT * FROM nexora.users WHERE id = $1`, [user.id]);
+    const fresh = await q1<any>(`SELECT * FROM nexora_msg.users WHERE id = $1`, [user.id]);
     return { ok: true, user: { ...fresh, password_hash: undefined } };
   });
 }

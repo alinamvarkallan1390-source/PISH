@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: Params) {
     const detail = await chatDetail(id, user.id);
     if (detail.type === "private" && detail.peer) {
       const peerRow = await q1<any>(
-        `SELECT last_read_seq::text AS seq FROM nexora.chat_members WHERE chat_id = $1 AND user_id = $2`,
+        `SELECT last_read_seq::text AS seq FROM nexora_msg.chat_members WHERE chat_id = $1 AND user_id = $2`,
         [id, detail.peer.id]
       );
       (detail as any).peer_read_seq = Number(peerRow?.seq ?? 0);
@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
     if (body.action === "pin" || body.action === "unpin") {
       await assertMember(id, user.id);
-      await q(`UPDATE nexora.chat_members SET pinned = $3 WHERE chat_id = $1 AND user_id = $2`, [
+      await q(`UPDATE nexora_msg.chat_members SET pinned = $3 WHERE chat_id = $1 AND user_id = $2`, [
         id,
         user.id,
         body.action === "pin",
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, { params }: Params) {
     }
     if (body.action === "mute" || body.action === "unmute") {
       await assertMember(id, user.id);
-      await q(`UPDATE nexora.chat_members SET muted = $3 WHERE chat_id = $1 AND user_id = $2`, [
+      await q(`UPDATE nexora_msg.chat_members SET muted = $3 WHERE chat_id = $1 AND user_id = $2`, [
         id,
         user.id,
         body.action === "mute",
@@ -48,7 +48,7 @@ export async function PATCH(req: Request, { params }: Params) {
     if (chat.type === "group" || chat.type === "channel") {
       await assertAdmin(id, user.id);
       await q(
-        `UPDATE nexora.chats SET
+        `UPDATE nexora_msg.chats SET
            title = COALESCE(NULLIF($2,''), title),
            bio = COALESCE($3, bio),
            avatar_emoji = COALESCE(NULLIF($4,''), avatar_emoji),
@@ -67,14 +67,14 @@ export async function DELETE(_req: Request, { params }: Params) {
     const member = await assertMember(id, user.id);
     const chat = await chatById(id);
     if (chat.type === "private") {
-      await q(`DELETE FROM nexora.chat_members WHERE chat_id = $1 AND user_id = $2`, [id, user.id]);
+      await q(`DELETE FROM nexora_msg.chat_members WHERE chat_id = $1 AND user_id = $2`, [id, user.id]);
       return { ok: true };
     }
     if (member.role === "owner") {
-      await q(`DELETE FROM nexora.chats WHERE id = $1`, [id]);
+      await q(`DELETE FROM nexora_msg.chats WHERE id = $1`, [id]);
       return { ok: true, deleted: true };
     }
-    await q(`DELETE FROM nexora.chat_members WHERE chat_id = $1 AND user_id = $2`, [id, user.id]);
+    await q(`DELETE FROM nexora_msg.chat_members WHERE chat_id = $1 AND user_id = $2`, [id, user.id]);
     return { ok: true };
   });
 }

@@ -5,7 +5,7 @@ import { HttpError, readJson, str, withUser } from "@/lib/http";
 type Params = { params: Promise<{ id: string }> };
 
 async function loadMessage(id: string) {
-  const msg = await q1<any>(`SELECT * FROM nexora.messages WHERE id = $1`, [id]);
+  const msg = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1`, [id]);
   if (!msg) throw new HttpError(404, "پیام پیدا نشد");
   return msg;
 }
@@ -19,7 +19,7 @@ export async function PATCH(req: Request, { params }: Params) {
     const body = await readJson(req);
     const text = str(body.text, 8000);
     if (!text.trim()) throw new HttpError(400, "متن پیام خالی است");
-    await q(`UPDATE nexora.messages SET text = $2, edited_at = now() WHERE id = $1`, [id, text]);
+    await q(`UPDATE nexora_msg.messages SET text = $2, edited_at = now() WHERE id = $1`, [id, text]);
     return { ok: true, message: await getMessage(id, user.id) };
   });
 }
@@ -32,7 +32,7 @@ export async function DELETE(_req: Request, { params }: Params) {
     const isAdmin = member.role === "owner" || member.role === "admin";
     if (msg.sender_id !== user.id && !isAdmin)
       throw new HttpError(403, "اجازهٔ حذف این پیام را ندارید");
-    await q(`UPDATE nexora.messages SET deleted = true, text = '' WHERE id = $1`, [id]);
+    await q(`UPDATE nexora_msg.messages SET deleted = true, text = '' WHERE id = $1`, [id]);
     return { ok: true };
   });
 }

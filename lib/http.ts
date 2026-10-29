@@ -24,9 +24,9 @@ export async function withUser<T>(fn: (user: any) => Promise<T>): Promise<Respon
     await ensureReady();
     const uid = await currentUserId();
     if (!uid) return fail(401, "برای ادامه وارد شوید");
-    const user = await q1<any>(`SELECT * FROM nexora.users WHERE id = $1`, [uid]);
+    const user = await q1<any>(`SELECT * FROM nexora_msg.users WHERE id = $1`, [uid]);
     if (!user) return fail(401, "حساب کاربری یافت نشد");
-    await q1(`UPDATE nexora.users SET last_seen = now() WHERE id = $1`, [uid]);
+    await q1(`UPDATE nexora_msg.users SET last_seen = now() WHERE id = $1`, [uid]);
     const result = await fn(user);
     if (result instanceof Response) return result;
     return NextResponse.json(result ?? { ok: true });
