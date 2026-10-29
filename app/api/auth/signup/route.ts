@@ -3,6 +3,7 @@ import { q, q1 } from "@/lib/db";
 import { ensureReady } from "@/lib/bootstrap";
 import { hashPassword, makeToken, sessionCookie } from "@/lib/auth";
 import { fail, normalizeUsername, readJson, str, validUsername } from "@/lib/http";
+import { ensureOnboarding } from "@/lib/onboarding";
 
 export async function POST(req: Request) {
   try {
@@ -34,6 +35,8 @@ export async function POST(req: Request) {
         colors[Math.floor(Math.random() * colors.length)],
       ]
     );
+
+    await ensureOnboarding(id);
 
     const res = NextResponse.json({ ok: true, user: { id, username, display_name: displayName } });
     res.cookies.set(sessionCookie(makeToken(id)));

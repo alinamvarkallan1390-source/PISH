@@ -1,38 +1,32 @@
 import { NextResponse } from "next/server";
-import { q } from "@/lib/db";
+import { q1 } from "@/lib/db";
 import { ensureReady } from "@/lib/bootstrap";
 
 export const dynamic = "force-dynamic";
 
+/** Lightweight health probe (no sensitive structure is exposed). */
 export async function GET() {
-  const out: any = { ok: true, steps: [] };
+  const started = Date.now();
   try {
     await ensureReady();
-    out.steps.push("ensureReady:ok");
-  } catch (e: any) {
-    out.steps.push("ensureReady:fail:" + e?.message);
-    out.readyError = e?.message;
-  }
-  try {
-    out.schemas = await q<any>(
-      `SELECT schema_name FROM information_schema.schemata ORDER BY schema_name`
-    );
-    out.tables = await q<any>(
-      `SELECT table_schema, table_name FROM information_schema.tables
-        WHERE table_schema NOT IN ('pg_catalog','information_schema') ORDER BY 1,2`
-    );
-    out.columns = await q<any>(
-      `SELECT table_schema, table_name, column_name, data_type
-         FROM information_schema.columns
-        WHERE table_schema = 'nexora_msg' AND table_name IN ('bots','users','chats','messages')
-        ORDER BY table_name, ordinal_position`
-    );
-    out.counts = await q<any>(
+    const stats = await q1<any>(
       `SELECT (SELECT count(*)::int FROM nexora_msg.users) AS users,
+              (SELECT count(*)::int FROM nexora_msg.chats) AS chats,
+              (SELECT count(*)::int FROM nexora_msg.messages) AS messages,
               (SELECT count(*)::int FROM nexora_msg.bots) AS bots`
-    ).catch((e: any) => ({ error: e?.message }));
-  } catch (e: any) {
-    out.error = e?.message;
+    );
+    return NextResponse.json({
+      ok: true,
+      app: "nexora",
+      version: "1.0.0",
+      db: "connected",
+      stats,
+      latency_ms: Date.now() - started,
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, app: "nexora", db: "error", error: err?.message, latency_ms: Date.now() - started },
+      { status: 500 }
+    );
   }
-  return NextResponse.json(out);
 }
