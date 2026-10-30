@@ -20,7 +20,17 @@ export async function GET() {
       app: "nexora",
       version: "1.0.0",
       db: "connected",
-      stats,
+      stats: {
+        ...stats,
+        chat_types: await q1<any>(
+          `SELECT count(*) FILTER (WHERE type='private')::int AS private,
+                  count(*) FILTER (WHERE type='group')::int AS groups,
+                  count(*) FILTER (WHERE type='channel')::int AS channels,
+                  count(*) FILTER (WHERE type='bot')::int AS bot_chats,
+                  count(*) FILTER (WHERE type='saved')::int AS saved
+             FROM nexora_msg.chats`
+        ),
+      },
       latency_ms: Date.now() - started,
     });
   } catch (err: any) {

@@ -56,6 +56,32 @@ async function boot() {
   await ensureBots();
   await ensureSettings();
   await purgeLegacyDemo();
+  await purgeOrphansOnce();
+}
+
+/** One-time removal of chats/messages left behind by the v1 demo accounts. */
+async function purgeOrphansOnce() {
+  try {
+    const done = await q1<any>(`SELECT value FROM nexora_msg.settings WHERE key = 'orphans_purged_v2'`);
+    if (done?.value === true) return;
+    const chats = await q<any>(
+      `DELETE FROM nexora_msg.chats c
+        WHERE NOT EXISTS (SELECT 1 FROM nexora_msg.chat_members m WHERE m.chat_id = c.id)
+        RETURNING c.id`
+    );
+    const msgs = await q<any>(
+      `DELETE FROM nexora_msg.messages m
+        WHERE NOT EXISTS (SELECT 1 FROM nexora_msg.chats c WHERE c.id = m.chat_id)
+        RETURNING m.id`
+    );
+    await q(
+      `INSERT INTO nexora_msg.settings (key, value, updated_at) VALUES ('orphans_purged_v2','true'::jsonb, now())
+       ON CONFLICT (key) DO UPDATE SET value = 'true'::jsonb, updated_at = now()`
+    );
+    console.log(`[nexora] orphans purged: ${chats.length} chats, ${msgs.length} messages`);
+  } catch (err: any) {
+    console.error("[nexora] purge orphans:", err?.message);
+  }
 }
 
 /**
@@ -102,6 +128,7 @@ async function purgeLegacyDemo() {
       `INSERT INTO nexora_msg.settings (key, value, updated_at) VALUES ('legacy_demo_purged','true'::jsonb, now())
        ON CONFLICT (key) DO UPDATE SET value = 'true'::jsonb, updated_at = now()`
     );
+
     console.log("[nexora] legacy demo data purged");
   } catch (err: any) {
     console.error("[nexora] purge legacy demo:", err?.message);
