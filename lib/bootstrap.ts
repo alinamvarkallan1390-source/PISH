@@ -38,12 +38,35 @@ const SEED_BOTS = [
 ];
 
 export async function ensureReady(): Promise<void> {
-  if (!globalThis.__nexoraBoot) globalThis.__nexoraBoot = boot();
+  if (!globalThis.__nexoraBoot) {
+    globalThis.__nexoraBoot = boot().catch((err) => {
+      // never cache a failed boot: the next request retries instead of erroring forever
+      globalThis.__nexoraBoot = undefined;
+      console.error("[nexora] boot failed:", err?.message);
+      throw err;
+    });
+  }
   return globalThis.__nexoraBoot;
 }
 
+/** Bump when schema changes so existing deployments re-run the DDL once. */
+const SCHEMA_VERSION = "3";
+
 async function boot() {
   const sql = await db();
+
+  // Fast path: skip the whole DDL + seed batch once the DB is already migrated.
+  // This is what keeps cold starts fast on serverless.
+  try {
+    const row = await sql(
+      `SELECT value FROM nexora_msg.settings WHERE key = 'schema_version' LIMIT 1`
+    );
+    const v = (row as any[])?.[0]?.value;
+    if (v === SCHEMA_VERSION) return;
+  } catch {
+    /* table missing → run the full migration below */
+  }
+
   for (const stmt of SCHEMA_STATEMENTS) {
     try {
       await sql(stmt);
@@ -58,6 +81,15 @@ async function boot() {
   await purgeLegacyDemo();
   await purgeOrphansOnce();
   await purgeOrphanBotsOnce();
+  try {
+    await q(
+      `INSERT INTO nexora_msg.settings (key, value, updated_at) VALUES ('schema_version', $1::jsonb, now())
+       ON CONFLICT (key) DO UPDATE SET value = $1::jsonb, updated_at = now()`,
+      [JSON.stringify(SCHEMA_VERSION)]
+    );
+  } catch (err: any) {
+    console.error("[nexora] schema version:", err?.message);
+  }
 }
 
 /** One-time removal of bots left behind by deleted owners. */

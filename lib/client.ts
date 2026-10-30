@@ -78,25 +78,69 @@ export type Msg = {
 
 export async function api<T = any>(
   url: string,
-  opts: { method?: string; body?: any; form?: FormData } = {}
+  opts: { method?: string; body?: any; form?: FormData; retries?: number; timeoutMs?: number } = {}
 ): Promise<T> {
-  const init: RequestInit = { method: opts.method || (opts.body || opts.form ? "POST" : "GET") };
-  if (opts.form) init.body = opts.form;
-  else if (opts.body !== undefined) {
-    init.body = JSON.stringify(opts.body);
-    init.headers = { "content-type": "application/json" };
+  const method = opts.method || (opts.body || opts.form ? "POST" : "GET");
+  const timeoutMs = opts.timeoutMs ?? 25000;
+  // reads are safe to retry; writes are sent exactly once
+  const retries = opts.retries ?? (method === "GET" ? 2 : 0);
+
+  let lastErr: any = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const init: RequestInit = { method, cache: "no-store" };
+    if (opts.form) init.body = opts.form;
+    else if (opts.body !== undefined) {
+      init.body = JSON.stringify(opts.body);
+      init.headers = { "content-type": "application/json" };
+    }
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    if (ctrl) init.signal = ctrl.signal;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+
+    try {
+      const res = await fetch(url, init);
+      if (timer) clearTimeout(timer);
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (!res.ok || data?.ok === false) {
+        const message =
+          data?.error ||
+          (res.status === 401
+            ? "لطفاً دوباره وارد شوید"
+            : res.status === 503
+            ? "سرور در حال به‌روزرسانی است، چند لحظه بعد تلاش کن"
+            : "خطا در ارتباط با سرور");
+        const err: any = new Error(message);
+        err.status = res.status;
+        // 5xx gets one more shot for idempotent reads
+        if (res.status >= 500 && attempt < retries && method === "GET") {
+          lastErr = err;
+          await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
+      return data as T;
+    } catch (error: any) {
+      if (timer) clearTimeout(timer);
+      lastErr = error;
+      const retriable =
+        attempt < retries &&
+        method === "GET" &&
+        (error?.name === "AbortError" || error instanceof TypeError || error?.status >= 500);
+      if (!retriable) {
+        if (error?.name === "AbortError")
+          throw new Error("اتصال به سرور طول کشید؛ دوباره تلاش کن");
+        throw error;
+      }
+      await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+    }
   }
-  const res = await fetch(url, init);
-  let data: any = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
-  }
-  if (!res.ok || data?.ok === false) {
-    throw new Error(data?.error || (res.status === 401 ? "لطفاً دوباره وارد شوید" : "خطا در ارتباط با سرور"));
-  }
-  return data as T;
+  throw lastErr ?? new Error("خطا در ارتباط با سرور");
 }
 
 export const faNum = (n: number | string) =>
