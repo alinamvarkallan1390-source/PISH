@@ -57,6 +57,28 @@ async function boot() {
   await ensureSettings();
   await purgeLegacyDemo();
   await purgeOrphansOnce();
+  await purgeOrphanBotsOnce();
+}
+
+/** One-time removal of bots left behind by deleted owners. */
+async function purgeOrphanBotsOnce() {
+  try {
+    const done = await q1<any>(`SELECT value FROM nexora_msg.settings WHERE key = 'orphan_bots_purged'`);
+    if (done?.value === true) return;
+    const bots = await q<any>(
+      `DELETE FROM nexora_msg.bots b
+        WHERE b.is_builtin = false
+          AND NOT EXISTS (SELECT 1 FROM nexora_msg.users u WHERE u.id = b.owner_id)
+        RETURNING b.id`
+    );
+    await q(
+      `INSERT INTO nexora_msg.settings (key, value, updated_at) VALUES ('orphan_bots_purged','true'::jsonb, now())
+       ON CONFLICT (key) DO UPDATE SET value = 'true'::jsonb, updated_at = now()`
+    );
+    console.log(`[nexora] orphan bots purged: ${bots.length}`);
+  } catch (err: any) {
+    console.error("[nexora] purge orphan bots:", err?.message);
+  }
 }
 
 /** One-time removal of chats/messages left behind by the v1 demo accounts. */
