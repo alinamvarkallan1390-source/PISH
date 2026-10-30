@@ -32,6 +32,7 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
   const [loadingChat, setLoadingChat] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hideList, setHideList] = useState(false);
+  const [officialBots, setOfficialBots] = useState<any[]>([]);
   const lastSeqRef = useRef(0);
   const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -56,6 +57,9 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
 
   useEffect(() => {
     loadChats();
+    api<{ bots: any[] }>("/api/bots")
+      .then((r) => setOfficialBots((r.bots || []).filter((b: any) => b.is_builtin)))
+      .catch(() => {});
   }, [loadChats]);
 
   const openChat = useCallback(
@@ -346,6 +350,17 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
     }
   }
 
+  async function quickStartBot(username: string) {
+    try {
+      const res = await api<{ chat_id: string }>("/api/open", { body: { handle: username } });
+      await loadChats();
+      await openChat(res.chat_id);
+      api(`/api/chats/${res.chat_id}/messages`, { body: { kind: "text", text: "/start" } }).catch(() => {});
+    } catch (err: any) {
+      toast(err.message, true);
+    }
+  }
+
   async function afterCreateChat(chatId: string) {
     setModal(null);
     await loadChats();
@@ -468,18 +483,44 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
           </div>
 
           <div className="chat-scroll">
-            {filtered.length === 0 && (
-              <div className="empty-hint">
-                {chats.length === 0 ? (
-                  <>
-                    هنوز گفتگویی نداری.
-                    <br />
-                    با دکمهٔ + شروع کن یا یک آیدی را جستجو کن.
-                  </>
-                ) : (
-                  "چیزی پیدا نشد."
-                )}
+            {filtered.length === 0 && chats.length === 0 && (
+              <div className="quickstart">
+                <div className="quickstart-title">شروع سریع 🚀</div>
+                <p className="hint" style={{ margin: "0 0 8px" }}>
+                  هنوز گفتگویی نداری. با یک ربات رسمی شروع کن یا از دکمهٔ + گفتگوی تازه بساز.
+                </p>
+                {officialBots.map((b) => (
+                  <button key={b.id} className="chat-item" onClick={() => quickStartBot(b.username)}>
+                    <div className="avatar md" style={{ background: "rgba(51,144,236,.16)" }}>
+                      🤖
+                    </div>
+                    <div className="chat-item-main">
+                      <div className="chat-item-top">
+                        <span className="chat-item-name">
+                          {b.name}
+                          <span className="pill-tag">BOT</span>
+                        </span>
+                      </div>
+                      <div className="chat-item-bottom">
+                        <span className="chat-item-preview">
+                          @{b.username} · {b.description || "ربات رسمی نکسورا"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                <div className="quickstart-actions">
+                  <button className="btn btn-ghost" onClick={() => setModal({ type: "search" })}>
+                    <Icon name="search" size={16} /> جستجوی آیدی
+                  </button>
+                  <Link className="btn btn-ghost" href="/python">
+                    🐍 ربات پایتون
+                  </Link>
+                </div>
               </div>
+            )}
+            {filtered.length === 0 && chats.length > 0 && (
+              <div className="empty-hint">چیزی پیدا نشد.</div>
             )}
             {filtered.map((c) => {
               const typing = c.typing?.length ? c.typing[0].display_name : null;

@@ -2809,3 +2809,30 @@ textarea::placeholder {
 .admin-table tr:hover td {
   background: var(--panel-hover);
 }
+
+/* quick start (empty chat list) */
+.quickstart {
+  padding: 8px 6px;
+  animation: rise 0.25s var(--ease);
+}
+.quickstart-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.quickstart .chat-item {
+  width: 100%;
+  text-align: start;
+  margin-bottom: 2px;
+}
+.quickstart-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.quickstart-actions .btn {
+  padding: 9px 13px;
+  font-size: 12.5px;
+}
