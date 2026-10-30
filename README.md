@@ -14,7 +14,7 @@
 | --- | --- |
 | از خود سایت | <https://nexora-pish.vercel.app/nexora-source.zip> |
 | از مخزن گیت | [`public/nexora-source.zip`](public/nexora-source.zip) |
-| از ریلیز گیت‌هاب | <https://github.com/alinamvarkallan1390-source/PISH/releases> |
+| کل مخزن از گیت‌هاب (zip) | <https://codeload.github.com/alinamvarkallan1390-source/PISH/zip/refs/heads/arena/460fccb4-pish> |
 | ساخت مجدد | `bash scripts/pack-source.sh` |
 
 داخل زیپ **هیچ فایل محرمانه‌ای نیست**: نه `.env`، نه `DATABASE_URL`، نه `NEXORA_SECRET`، نه
