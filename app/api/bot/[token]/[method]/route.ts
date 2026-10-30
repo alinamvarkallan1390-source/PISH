@@ -3,34 +3,12 @@ import { q, q1 } from "@/lib/db";
 import { ensureReady } from "@/lib/bootstrap";
 import { sendBotMessage, dispatchBotUpdate } from "@/lib/messaging";
 import { getMessage, openBotChat, chatMembers } from "@/lib/queries";
+import { toBotMessage } from "@/lib/botFormat";
 
 type Params = { params: Promise<{ token: string; method: string }> };
 
 function botError(message: string, status = 400) {
   return NextResponse.json({ ok: false, error_code: status, description: message }, { status });
-}
-
-function toBotMessage(m: any) {
-  if (!m) return null;
-  return {
-    message_id: m.id,
-    date: Math.floor(new Date(m.created_at).getTime() / 1000),
-    chat: { id: m.chat_id, type: "private" },
-    from: m.is_bot
-      ? { id: m.sender_bot_id, is_bot: true, first_name: m.sender_name, username: m.sender_username }
-      : {
-          id: m.sender_id,
-          is_bot: false,
-          first_name: m.sender_name,
-          username: m.sender_username,
-        },
-    text: m.text,
-    kind: m.kind,
-    media: m.media_url ? { url: m.media_url, mime: m.media_mime, name: m.media_name } : null,
-    reply_markup: m.meta?.buttons ? { inline_keyboard: m.meta.buttons } : undefined,
-    reply_to_message_id: m.reply?.id ?? null,
-    reactions: m.reactions,
-  };
 }
 
 async function handle(

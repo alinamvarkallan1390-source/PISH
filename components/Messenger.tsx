@@ -393,6 +393,9 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
           <Link href="/bots" className="rail-btn rail-optional" title="ربات‌ساز">
             <Icon name="zap" size={22} />
           </Link>
+          <Link href="/python" className="rail-btn rail-optional" title="ربات‌سازی با پایتون">
+            <span style={{ fontSize: 19 }}>🐍</span>
+          </Link>
           <Link href="/docs" className="rail-btn rail-optional" title="مستندات Bot API">
             <Icon name="book" size={22} />
           </Link>
@@ -508,6 +511,13 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
                       <span className={`chat-item-preview ${typing ? "typing" : ""}`}>
                         {typing ? (
                           <>در حال نوشتن…</>
+                        ) : c.last_message?.sender_id === me.id ? (
+                          <>
+                            <span className="preview-tick">
+                              <Icon name="checks" size={15} />
+                            </span>
+                            {previewOf(c)}
+                          </>
                         ) : c.type !== "private" && c.last_message ? (
                           <>
                             {c.type !== "bot" && (
@@ -579,6 +589,9 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
                   </button>
                   <Link className="btn btn-ghost" href="/bots">
                     <Icon name="bot" size={17} /> ربات‌ساز
+                  </Link>
+                  <Link className="btn btn-ghost" href="/python">
+                    <span style={{ fontSize: 15 }}>🐍</span> با پایتون بساز
                   </Link>
                 </div>
               </div>

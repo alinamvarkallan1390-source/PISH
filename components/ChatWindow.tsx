@@ -50,6 +50,8 @@ export default function ChatWindow(props: Props) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showAttach, setShowAttach] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const imgRef = useRef<HTMLInputElement | null>(null);
@@ -218,6 +220,19 @@ export default function ChatWindow(props: Props) {
     setPollOptions(["", ""]);
   }
 
+  function trackScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
+  }
+
+  function scrollToBottom() {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    setAtBottom(true);
+  }
+
   let lastDay = "";
 
   return (
@@ -270,7 +285,7 @@ export default function ChatWindow(props: Props) {
         </div>
       )}
 
-      <div className="messages" ref={scrollRef}>
+      <div className="messages" ref={scrollRef} onScroll={trackScroll}>
         {loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 18 }}>
             {[70, 45, 60, 35].map((w, i) => (
@@ -317,7 +332,15 @@ export default function ChatWindow(props: Props) {
                       {m.sender_name} {m.is_bot && "🤖"}
                     </span>
                   )}
-                  <div className={`bubble ${m.deleted ? "deleted" : ""} ${mine ? "tail-out" : "tail-in"}`}>
+                  <div
+                    className={`bubble ${m.deleted ? "deleted" : ""} ${mine ? "tail-out" : "tail-in"}`}
+                    onDoubleClick={() => {
+                      if (!m.deleted) {
+                        setReplyTo(m);
+                        taRef.current?.focus();
+                      }
+                    }}
+                  >
                     {!m.deleted && (
                       <div className="msg-tools">
                         <button title="پاسخ" onClick={() => { setReplyTo(m); taRef.current?.focus(); }}>
@@ -472,6 +495,15 @@ export default function ChatWindow(props: Props) {
         <div style={{ height: 6 }} />
       </div>
 
+      <button
+        className={`fab-down ${!atBottom ? "show" : ""}`}
+        onClick={scrollToBottom}
+        title="رفتن به آخرین پیام‌ها"
+        aria-label="رفتن به آخرین پیام‌ها"
+      >
+        <Icon name="chevron" size={18} />
+      </button>
+
       <div className="typing-bar">
         {typingNames.length > 0 && (
           <>
@@ -618,19 +650,76 @@ export default function ChatWindow(props: Props) {
             </div>
           )}
 
+          {showAttach && (
+            <div className="attach-menu">
+              <button
+                onClick={() => {
+                  setShowAttach(false);
+                  imgRef.current?.click();
+                }}
+              >
+                <span className="ico">
+                  <Icon name="camera" size={16} />
+                </span>
+                عکس و تصویر
+              </button>
+              <button
+                onClick={() => {
+                  setShowAttach(false);
+                  fileRef.current?.click();
+                }}
+              >
+                <span className="ico">
+                  <Icon name="doc" size={16} />
+                </span>
+                فایل و سند
+              </button>
+              <button
+                onClick={() => {
+                  setShowAttach(false);
+                  setShowPoll(true);
+                }}
+              >
+                <span className="ico">
+                  <Icon name="poll" size={16} />
+                </span>
+                نظرسنجی
+              </button>
+              <button
+                onClick={() => {
+                  setShowAttach(false);
+                  startRecording();
+                }}
+              >
+                <span className="ico">
+                  <Icon name="mic" size={16} />
+                </span>
+                پیام صوتی
+              </button>
+            </div>
+          )}
+
           <div className="composer-inner">
             <div className="composer-tools">
-              <button className="icon-btn" title="ایموجی و استیکر" onClick={() => setShowEmoji((s) => !s)}>
-                <Icon name="smile" size={21} />
-              </button>
-              <button className="icon-btn" title="نظرسنجی" onClick={() => setShowPoll(true)}>
-                <Icon name="poll" size={20} />
-              </button>
-              <button className="icon-btn" title="پیوست فایل" onClick={() => fileRef.current?.click()}>
+              <button
+                className="icon-btn"
+                title="پیوست"
+                onClick={() => {
+                  setShowAttach((v) => !v);
+                  setShowEmoji(false);
+                }}
+              >
                 <Icon name="paperclip" size={20} />
               </button>
-              <button className="icon-btn" title="ارسال عکس" onClick={() => imgRef.current?.click()}>
-                <Icon name="camera" size={20} />
+              <button
+                className="icon-btn"
+                title="ایموجی و استیکر"
+                onClick={() => {
+                  setShowEmoji((s) => !s);
+                  setShowAttach(false);
+                }}
+              >
+                <Icon name="smile" size={20} />
               </button>
             </div>
             <textarea

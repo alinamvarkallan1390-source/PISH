@@ -33,6 +33,7 @@ export default function DocsPage() {
         <div className="topbar" style={{ margin: "-26px -22px 8px", borderRadius: 0 }}>
           <Link href="/" className="back-link">بازگشت به پیام‌رسان</Link>
           <div style={{ flex: 1 }} />
+          <Link href="/python" className="back-link">🐍 ربات پایتون</Link>
           <Link href="/bots" className="back-link">ربات‌ساز</Link>
         </div>
 
@@ -166,6 +167,18 @@ while True:
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="card prose" style={{ borderColor: "rgba(51,144,236,.35)" }}>
+          <h2 style={{ marginTop: 0 }}>🐍 SDK رسمی پایتون</h2>
+          <p>
+            ساده‌ترین راه ساخت ربات: SDK آمادهٔ پایتون بدون هیچ وابستگی. کد کامل + نمونه در صفحهٔ
+            مخصوص آن است.
+          </p>
+          <div className="code-block">{`curl -O https://nexora-pish.vercel.app/sdk/nexora_bot.py`}</div>
+          <Link href="/python" className="btn btn-primary">
+            مستندات پایتون
+          </Link>
         </div>
 
         <div className="card prose">

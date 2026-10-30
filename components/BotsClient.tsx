@@ -102,11 +102,14 @@ export default function BotsClient({ me }: { me: Me }) {
   return (
     <div className="page">
       <div className="page-inner">
-        <div className="topbar" style={{ margin: "-26px -22px 8px", borderRadius: 0 }}>
+        <div className="topbar">
           <Link href="/" className="back-link">
             <Icon name="back" size={15} /> بازگشت به پیام‌رسان
           </Link>
           <div style={{ flex: 1 }} />
+          <Link href="/python" className="back-link">
+            🐍 ربات پایتون
+          </Link>
           <Link href="/docs" className="back-link">
             <Icon name="book" size={15} /> مستندات Bot API
           </Link>

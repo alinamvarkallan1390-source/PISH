@@ -1,6 +1,7 @@
 import { q, q1 } from "./db";
 import { getMessage, chatById, lastSeq, chatBots } from "./queries";
 import { builtinReply } from "./builtinBots";
+import { toBotUpdate } from "./botFormat";
 import { HttpError } from "./http";
 
 export type SendOptions = {
@@ -74,13 +75,8 @@ export async function sendMessage(opts: SendOptions) {
     if (bot) {
       if (bot.is_builtin) {
         void builtinReply(bot, opts.chatId, text, message);
-      } else {
-        void dispatchBotUpdate(bot, {
-          type: "message",
-          chat_id: opts.chatId,
-          message,
-        });
       }
+      void dispatchBotUpdate(bot, toBotUpdate("message", opts.chatId, message, "private"));
     }
   }
 
@@ -224,14 +220,8 @@ async function deliverToGroupBots(chat: any, message: any) {
           const { builtinReply } = await import("./builtinBots");
           void builtinReply(bot, chat.id, (message.text || "").replace(new RegExp(`@${bot.username}`, "gi"), "").trim(), message);
         }
-      } else {
-        void dispatchBotUpdate(bot, {
-          type: "message",
-          chat_id: chat.id,
-          chat_type: chat.type,
-          message,
-        });
       }
+      void dispatchBotUpdate(bot, toBotUpdate("message", chat.id, message, chat.type));
     }
   } catch (err) {
     console.error("[nexora] group bots", err);

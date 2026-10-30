@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexora-bot"
+version = "1.0.0"
+description = "Python SDK for the Nexora messenger Bot API"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Nexora" }]
+keywords = ["nexora", "bot", "messenger", "telegram-like", "sdk"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://nexora-pish.vercel.app/python"
+Documentation = "https://nexora-pish.vercel.app/docs"
+
+[tool.setuptools]
+py-modules = ["nexora_bot"]

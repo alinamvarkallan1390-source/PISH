@@ -140,6 +140,10 @@ export default function AuthScreen({ registrationOpen = true }: { registrationOp
             با ورود، قوانین استفاده و حریم خصوصی نکسورا را می‌پذیرید.
           </p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
+            <a href="/python" className="back-link">
+              🐍 ربات پایتون
+            </a>
+            <span style={{ opacity: 0.3 }}>·</span>
             <a href="/docs" className="back-link">
               <Icon name="book" size={15} /> مستندات <span dir="ltr">Bot API</span>
             </a>

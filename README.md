@@ -30,6 +30,14 @@
 | نگهداری | حالت تعمیرات + متن پیام، پاک‌سازی دمو، چت‌های خالی، مدیای بی‌مالک |
 | لاگ | ثبت همهٔ اقدامات مدیریتی در `audit_log` |
 
+## نکات نسخهٔ ۳
+
+- **ظاهر تلگرام‌گونه و پرمیوم**: حباب‌های دنباله‌دار، تیک خوانده‌شدن آبی، پیل تاریخ، نقل‌قول رنگی،
+  ری‌اکشن‌های شیشه‌ای، دکمهٔ شیشه‌ای داخل پیام، پس‌زمینهٔ نقطه‌چین محو، مودال‌ها و منوهای شیشه‌ای.
+- **۳ پوسته**: تاریک (تلگرام‌مانند)، روشن (حباب سبز)، آمولد.
+- **موبایل واقعی**: تب‌بار پایین، چت تمام‌صفحه، شیت‌های پایین‌کشیدنی، دکمهٔ «رفتن به آخرین پیام».
+- **پایتون**: SDK کامل + صفحهٔ مستندات + دانلود مستقیم.
+
 ## نکات نسخهٔ ۲
 
 - **طراحی شیشه‌ای‌تر**: aurora blobs، شیشهٔ مات با `backdrop-filter: blur(34px)` در همهٔ سطوح،
@@ -40,6 +48,38 @@
 - **نظرسنجی**: ساخت تا ۸ گزینه، رأی زنده، شمارش درصدی.
 - **پیام‌های ذخیره‌شده**: گفتگوی شخصی «🔖 پیام‌های ذخیره‌شده» با ذخیرهٔ هر پیام از منوی پیام.
 - **ربات در گروه**: افزودن ربات از پنجرهٔ اطلاعات گروه؛ پاسخ به منشن و دستورهای `/`.
+
+## 🐍 ربات‌سازی با پایتون
+
+SDK رسمی و بدون وابستگی برای ساخت ربات:
+
+```bash
+curl -O https://nexora-pish.vercel.app/sdk/nexora_bot.py
+NEXORA_TOKEN="123456:AAH-..." python echo_bot.py
+```
+
+```python
+from nexora_bot import Bot, inline_keyboard
+
+bot = Bot("123456:AAH-TOKEN")
+
+@bot.on("command:start")
+def start(update):
+    bot.send_message(update.chat_id, f"سلام {update.user['first_name']}! 👋",
+                     reply_markup=inline_keyboard([[{"text": "راهنما", "data": "help"}]]))
+
+@bot.on("message")
+def echo(update):
+    if not update.text.startswith("/"):
+        bot.reply(update, "🔁 " + update.text)
+
+bot.run_polling()
+```
+
+- سورس: [`python/nexora_bot.py`](./python/nexora_bot.py) · نمونه: [`python/echo_bot.py`](./python/echo_bot.py)
+- مستندات وب: `/python` · دانلود مستقیم: `/sdk/nexora_bot.py`
+- نصب به‌عنوان پکیج: `pip install git+https://github.com/alinamvarkallan1390-source/PISH#subdirectory=python`
+- پیلودها **سازگار با تلگرام** هستند (`message.chat.id`, `message.from`, `reply_markup.inline_keyboard`)
 
 ## قابلیت‌ها
 

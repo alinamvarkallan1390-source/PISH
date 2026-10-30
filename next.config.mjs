@@ -8,6 +8,10 @@ const nextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["@electric-sql/pglite"],
   eslint: { ignoreDuringBuilds: true },
+  // ship the Python SDK files inside the serverless bundle for /sdk/[file]
+  outputFileTracingIncludes: {
+    "/sdk/[file]": ["./python/**"],
+  },
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
