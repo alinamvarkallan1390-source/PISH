@@ -10,8 +10,13 @@ export default async function Home() {
   await ensureReady();
   const uid = await currentUserId();
   if (!uid) redirect("/login");
+
   const user = await q1<any>(`SELECT * FROM nexora_msg.users WHERE id = $1`, [uid]);
-  if (!user) redirect("/login");
+
+  // Stale session (account deleted / purged) or banned account:
+  // wipe the cookie first, otherwise / and /login would bounce forever.
+  if (!user) redirect("/api/auth/logout?next=/login&reason=expired");
+  if (user.is_banned) redirect("/api/auth/logout?next=/login&reason=banned");
 
   return (
     <Messenger

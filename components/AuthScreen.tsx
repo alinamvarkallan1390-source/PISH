@@ -5,7 +5,18 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { Icon } from "./Icons";
 
-export default function AuthScreen({ registrationOpen = true }: { registrationOpen?: boolean }) {
+const NOTICES: Record<string, string> = {
+  expired: "نشست قبلی منقضی شده بود (حساب حذف یا بازنشانی شده). دوباره وارد شو.",
+  banned: "دسترسی این حساب مسدود شده است. با پشتیبانی تماس بگیر.",
+};
+
+export default function AuthScreen({
+  registrationOpen = true,
+  notice,
+}: {
+  registrationOpen?: boolean;
+  notice?: string;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">(registrationOpen ? "login" : "login");
   const [username, setUsername] = useState("");
@@ -94,6 +105,12 @@ export default function AuthScreen({ registrationOpen = true }: { registrationOp
           <p className="sub">
             {mode === "login" ? "با نام کاربری و رمزت وارد شو" : "در چند ثانیه حساب بساز و شروع کن"}
           </p>
+
+          {notice && NOTICES[notice] && (
+            <div className="auth-notice" role="status">
+              {NOTICES[notice]}
+            </div>
+          )}
 
           <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div className="field">
