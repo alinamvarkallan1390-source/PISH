@@ -5,6 +5,28 @@
 - 🌐 **نسخهٔ زنده:** https://nexora-pish.vercel.app
 - 🤖 **ربات‌ساز:** https://nexora-pish.vercel.app/bots
 - 📚 **مستندات API:** https://nexora-pish.vercel.app/docs
+- 📦 **زیپ کامل سورس:** [`nexora-source.zip`](public/nexora-source.zip) — یا مستقیم از
+  <https://nexora-pish.vercel.app/nexora-source.zip> (بدون هیچ کلید و رمزی)
+
+## دانلود سورس کامل
+
+| راه | نشانی |
+| --- | --- |
+| از خود سایت | <https://nexora-pish.vercel.app/nexora-source.zip> |
+| از مخزن گیت | [`public/nexora-source.zip`](public/nexora-source.zip) |
+| از ریلیز گیت‌هاب | <https://github.com/alinamvarkallan1390-source/PISH/releases> |
+| ساخت مجدد | `bash scripts/pack-source.sh` |
+
+داخل زیپ **هیچ فایل محرمانه‌ای نیست**: نه `.env`، نه `DATABASE_URL`، نه `NEXORA_SECRET`، نه
+`node_modules`/`.next` و نه تاریخچهٔ گیت. فقط سورس کامل + `package-lock.json` + `.env.example`.
+اسم فایل‌های زیپ زیر پوشهٔ `nexora/` است؛ بعد از استخراج:
+
+```bash
+cd nexora
+cp .env.example .env.local   # اختیاری: برای دیتابیس واقعی مقادیر را پر کن
+npm install
+npm run dev
+```
 
 ## شروع از صفر
 

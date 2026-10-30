@@ -168,6 +168,10 @@ export default function AuthScreen({
             <a href="/adminn" className="back-link" title="پنل مدیریت">
               <Icon name="shield" size={14} /> مدیریت
             </a>
+            <span style={{ opacity: 0.3 }}>·</span>
+            <a href="/nexora-source.zip" download className="back-link" title="دانلود زیپ کامل سورس">
+              <Icon name="download" size={14} /> سورس کامل
+            </a>
           </div>
         </section>
       </div>

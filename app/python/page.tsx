@@ -98,6 +98,9 @@ export default function PythonPage() {
             <a className="btn btn-ghost" href="/sdk/pyproject.toml" target="_blank" rel="noreferrer">
               pyproject.toml
             </a>
+            <a className="btn btn-ghost" href="/nexora-source.zip" download>
+              📦 زیپ کامل سورس
+            </a>
             <CopyButton text="pip install git+https://github.com/alinamvarkallan1390-source/PISH#subdirectory=python" label="کپی دستور pip" />
           </div>
           <div style={{ fontSize: 13.5, color: "var(--muted)", lineHeight: 2 }}>

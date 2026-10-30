@@ -281,6 +281,14 @@ export function Icon({
           <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2.5 2.5M15 15l2.5 2.5M17.5 6.5 15 9M9 15l-2.5 2.5" />
         </svg>
       );
+    case "download":
+      return (
+        <svg {...p}>
+          <path d="M12 3v12" />
+          <path d="m7 11 5 5 5-5" />
+          <path d="M4 20h16" />
+        </svg>
+      );
     default:
       return (
         <svg {...p}>

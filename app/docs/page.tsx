@@ -176,9 +176,14 @@ while True:
             مخصوص آن است.
           </p>
           <div className="code-block">{`curl -O https://nexora-pish.vercel.app/sdk/nexora_bot.py`}</div>
-          <Link href="/python" className="btn btn-primary">
-            مستندات پایتون
-          </Link>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Link href="/python" className="btn btn-primary">
+              مستندات پایتون
+            </Link>
+            <a className="btn btn-ghost" href="/nexora-source.zip" download>
+              📦 دانلود زیپ کامل سورس
+            </a>
+          </div>
         </div>
 
         <div className="card prose">
