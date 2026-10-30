@@ -342,8 +342,39 @@ export function ChatInfoModal({
 }) {
   const [addHandle, setAddHandle] = useState("");
   const [title, setTitle] = useState(chat?.title || "");
+  const [chatBots, setChatBots] = useState<any[]>([]);
+  const [botHandle, setBotHandle] = useState("");
   const isGroupish = chat?.type === "group" || chat?.type === "channel";
   const canEdit = chat?.role === "owner" || chat?.role === "admin";
+
+  useEffect(() => {
+    if (!chat?.id || !isGroupish) return;
+    api<{ bots: any[] }>(`/api/chats/${chat.id}/bots`)
+      .then((r) => setChatBots(r.bots))
+      .catch(() => {});
+  }, [chat?.id, isGroupish]);
+
+  async function addBot() {
+    if (!botHandle.trim()) return;
+    try {
+      const r = await api<{ bot: any }>(`/api/chats/${chat.id}/bots`, { body: { username: botHandle.trim() } });
+      setBotHandle("");
+      setChatBots((prev) => [...prev.filter((b) => b.id !== r.bot.id), r.bot]);
+      toast(`ربات @${r.bot.username} به گروه اضافه شد 🤖`);
+    } catch (err: any) {
+      toast(err.message, true);
+    }
+  }
+
+  async function removeBot(id: string) {
+    try {
+      await api(`/api/chats/${chat.id}/bots`, { method: "DELETE", body: { bot_id: id } });
+      setChatBots((prev) => prev.filter((b) => b.id !== id));
+      toast("ربات حذف شد");
+    } catch (err: any) {
+      toast(err.message, true);
+    }
+  }
 
   async function addMember() {
     if (!addHandle.trim()) return;
@@ -450,6 +481,46 @@ export function ChatInfoModal({
               <button className="btn btn-primary" style={{ flex: "none", paddingInline: 16 }} onClick={addMember}>
                 افزودن
               </button>
+            </div>
+          </div>
+        )}
+
+        {isGroupish && canEdit && (
+          <div className="field">
+            <label>ربات‌های گروه ({faNum(chatBots.length)})</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                className="input"
+                dir="ltr"
+                placeholder="nexora_bot"
+                value={botHandle}
+                onChange={(e) => setBotHandle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addBot()}
+              />
+              <button className="btn btn-primary" style={{ flex: "none", paddingInline: 16 }} onClick={addBot}>
+                افزودن
+              </button>
+            </div>
+            <div className="picker-list" style={{ maxHeight: 160 }}>
+              {chatBots.map((b) => (
+                <div key={b.id} className="picker-item">
+                  <div className="avatar sm" style={{ background: "rgba(6,182,212,.2)" }}>
+                    🤖
+                  </div>
+                  <div className="meta">
+                    <div className="name">{b.name}</div>
+                    <div className="sub">@{b.username} · به /start@ یا دستور پاسخ می‌دهد</div>
+                  </div>
+                  <button className="icon-btn" onClick={() => removeBot(b.id)} title="حذف ربات">
+                    <Icon name="close" size={14} />
+                  </button>
+                </div>
+              ))}
+              {chatBots.length === 0 && (
+                <div className="hint" style={{ padding: "6px 4px" }}>
+                  رباتی اضافه نشده. آیدی ربات را وارد کن (مثلاً nexora_bot).
+                </div>
+              )}
             </div>
           </div>
         )}

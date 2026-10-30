@@ -28,7 +28,11 @@ async function createDb(): Promise<QueryFn> {
   }
 
   const { PGlite } = await import("@electric-sql/pglite");
+  const { mkdirSync } = await import("node:fs");
   const dir = process.env.NEXORA_PGLITE_DIR || ".data/nexora";
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {}
   const db = new PGlite(dir);
   await (db as any).waitReady;
   return async (text: string, params: any[] = []) => {
@@ -38,7 +42,13 @@ async function createDb(): Promise<QueryFn> {
 }
 
 export function db(): Promise<QueryFn> {
-  if (!globalThis.__nexoraDb) globalThis.__nexoraDb = createDb();
+  if (!globalThis.__nexoraDb) {
+    globalThis.__nexoraDb = createDb().catch((err) => {
+      // never cache a rejected handle: the next request retries cleanly
+      globalThis.__nexoraDb = undefined;
+      throw err;
+    });
+  }
   return globalThis.__nexoraDb;
 }
 

@@ -65,6 +65,7 @@ export type Msg = {
   reply: { id: string; text: string; sender_name: string; kind: string } | null;
   forward_from: string | null;
   reactions: { emoji: string; user_id: string }[];
+  votes?: { option_id: string; user_id: string }[];
   edited: boolean;
   pinned: boolean;
   deleted: boolean;

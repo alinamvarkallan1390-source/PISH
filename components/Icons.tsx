@@ -256,6 +256,31 @@ export function Icon({
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
       );
+    case "bookmark":
+      return (
+        <svg {...p}>
+          <path d="M19 21 12 16.5 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "poll":
+      return (
+        <svg {...p}>
+          <path d="M6 20V10M12 20V4M18 20v-7" />
+        </svg>
+      );
+    case "chart":
+      return (
+        <svg {...p}>
+          <path d="M3 3v18h18" />
+          <path d="M7 15l4-5 3 3 5-7" />
+        </svg>
+      );
+    case "sparkles":
+      return (
+        <svg {...p}>
+          <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2.5 2.5M15 15l2.5 2.5M17.5 6.5 15 9M9 15l-2.5 2.5" />
+        </svg>
+      );
     default:
       return (
         <svg {...p}>

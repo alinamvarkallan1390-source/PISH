@@ -3,12 +3,14 @@ import { q, q1 } from "@/lib/db";
 import { ensureReady } from "@/lib/bootstrap";
 import { hashPassword, makeToken, sessionCookie } from "@/lib/auth";
 import { fail, normalizeUsername, readJson, str, validUsername } from "@/lib/http";
-import { ensureOnboarding } from "@/lib/onboarding";
 
 export async function POST(req: Request) {
   try {
     await ensureReady();
     const body = await readJson(req);
+    const { getSetting } = await import("@/lib/bootstrap");
+    if (!(await getSetting<boolean>("registration_open")))
+      return fail(403, "ثبت‌نام در حال حاضر بسته است");
     const username = normalizeUsername(body.username);
     const displayName = str(body.displayName, 60).trim() || username;
     const password = str(body.password, 200);
@@ -35,8 +37,6 @@ export async function POST(req: Request) {
         colors[Math.floor(Math.random() * colors.length)],
       ]
     );
-
-    await ensureOnboarding(id);
 
     const res = NextResponse.json({ ok: true, user: { id, username, display_name: displayName } });
     res.cookies.set(sessionCookie(makeToken(id)));

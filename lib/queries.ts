@@ -13,6 +13,7 @@ export type PublicUser = {
 };
 
 export type Reaction = { emoji: string; user_id: string };
+export type Vote = { option_id: string; user_id: string };
 
 export type MessageDTO = {
   id: string;
@@ -33,6 +34,7 @@ export type MessageDTO = {
   reply: { id: string; text: string; sender_name: string; kind: string } | null;
   forward_from: string | null;
   reactions: Reaction[];
+  votes: Vote[];
   edited: boolean;
   pinned: boolean;
   deleted: boolean;
@@ -51,6 +53,8 @@ const MESSAGE_SELECT = `
          md.mime AS media_mime, md.name AS media_name,
          (SELECT json_agg(json_build_object('emoji', r.emoji, 'user_id', r.user_id))
             FROM nexora_msg.reactions r WHERE r.message_id = m.id) AS reactions,
+         (SELECT json_agg(json_build_object('option_id', pv.option_id, 'user_id', pv.user_id))
+            FROM nexora_msg.poll_votes pv WHERE pv.message_id = m.id) AS votes,
          (SELECT json_build_object('id', rm.id, 'text', rm.text, 'kind', rm.kind,
                     'sender_name', COALESCE(ru.display_name, rb.name, 'کاربر'))
             FROM nexora_msg.messages rm
@@ -84,6 +88,7 @@ export function mapMessage(row: any, meId?: string): MessageDTO {
     reply: row.reply && row.reply.id ? row.reply : null,
     forward_from: row.forward_from || null,
     reactions: Array.isArray(row.reactions) ? row.reactions.filter(Boolean) : [],
+    votes: Array.isArray(row.votes) ? row.votes.filter(Boolean) : [],
     edited: !!row.edited_at,
     pinned: !!row.pinned,
     deleted: !!row.deleted,
@@ -170,13 +175,17 @@ export async function listChats(userId: string) {
     const peer = r.peer || null;
     const bot = r.bot || null;
     const title =
-      r.type === "private"
+      r.type === "saved"
+        ? "پیام‌های ذخیره‌شده"
+        : r.type === "private"
         ? peer?.display_name || "گفتگوی خصوصی"
         : r.type === "bot"
         ? bot?.name || "ربات"
         : r.title || "گفتگو";
-    const emoji = r.type === "private" ? peer?.avatar_emoji || "👤" : r.avatar_emoji;
-    const color = r.type === "private" ? peer?.avatar_color || "#6366f1" : r.avatar_color;
+    const emoji =
+      r.type === "saved" ? "🔖" : r.type === "private" ? peer?.avatar_emoji || "👤" : r.avatar_emoji;
+    const color =
+      r.type === "saved" ? "#f59e0b" : r.type === "private" ? peer?.avatar_color || "#6366f1" : r.avatar_color;
     const online =
       r.type === "private" && peer?.last_seen
         ? Date.now() - new Date(peer.last_seen).getTime() < 120000
@@ -352,4 +361,43 @@ export async function chatDetail(chatId: string, meId: string) {
         ? Number(members.find((m: any) => m.id === peer.id) ? 0 : 0) // filled below
         : 0,
   };
+}
+
+/** Lazily creates (or returns) the personal "saved messages" chat. */
+export async function openSavedChat(userId: string) {
+  const existing = await q1<any>(
+    `SELECT c.* FROM nexora_msg.chats c
+      JOIN nexora_msg.chat_members m ON m.chat_id = c.id AND m.user_id = $1
+     WHERE c.type = 'saved' LIMIT 1`,
+    [userId]
+  );
+  if (existing) return existing;
+  const id = crypto.randomUUID();
+  await q(
+    `INSERT INTO nexora_msg.chats (id, type, title, avatar_emoji, avatar_color, owner_id)
+     VALUES ($1,'saved','پیام‌های ذخیره‌شده','🔖','#f59e0b',$2)`,
+    [id, userId]
+  );
+  await q(
+    `INSERT INTO nexora_msg.chat_members (chat_id, user_id, role) VALUES ($1,$2,'owner')`,
+    [id, userId]
+  );
+  return chatById(id);
+}
+
+/** Bots that live inside a group/channel. */
+export async function chatBots(chatId: string) {
+  return q<any>(
+    `SELECT b.* FROM nexora_msg.bot_members bm JOIN nexora_msg.bots b ON b.id = bm.bot_id
+      WHERE bm.chat_id = $1`,
+    [chatId]
+  );
+}
+
+export async function addBotToChat(chatId: string, botId: string, addedBy: string) {
+  await q(
+    `INSERT INTO nexora_msg.bot_members (chat_id, bot_id, added_by) VALUES ($1,$2,$3)
+     ON CONFLICT (chat_id, bot_id) DO NOTHING`,
+    [chatId, botId, addedBy]
+  );
 }

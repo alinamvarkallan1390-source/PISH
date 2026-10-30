@@ -135,6 +135,7 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
                   fresh.deleted !== m.deleted ||
                   fresh.pinned !== m.pinned ||
                   JSON.stringify(fresh.reactions) !== JSON.stringify(m.reactions) ||
+                  JSON.stringify(fresh.votes || []) !== JSON.stringify(m.votes || []) ||
                   fresh.edited !== m.edited
                 ) {
                   replaced = true;
@@ -355,7 +356,7 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
     <>
       <div className="app">
         <aside className="rail">
-          <button className="rail-btn" title="نکسورا" onClick={() => setFilter("all")}>
+          <button className="rail-btn rail-brand" title="نکسورا" onClick={() => setFilter("all")}>
             <div className="brand-mark" style={{ width: 34, height: 34, borderRadius: 11, fontSize: 16 }}>
               ✦
             </div>
@@ -365,19 +366,34 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
             <Icon name="chat" size={22} />
             {totalUnread > 0 && <span className="badge">{faNum(Math.min(totalUnread, 99))}</span>}
           </button>
-          <button className={`rail-btn ${filter === "groups" ? "active" : ""}`} onClick={() => setFilter("groups")} title="گروه‌ها">
+          <button className={`rail-btn rail-optional ${filter === "groups" ? "active" : ""}`} onClick={() => setFilter("groups")} title="گروه‌ها">
             <Icon name="users" size={22} />
           </button>
-          <button className={`rail-btn ${filter === "channels" ? "active" : ""}`} onClick={() => setFilter("channels")} title="کانال‌ها">
+          <button className={`rail-btn rail-optional ${filter === "channels" ? "active" : ""}`} onClick={() => setFilter("channels")} title="کانال‌ها">
             <Icon name="megaphone" size={22} />
           </button>
           <button className={`rail-btn ${filter === "bots" ? "active" : ""}`} onClick={() => setFilter("bots")} title="ربات‌ها">
             <Icon name="bot" size={22} />
           </button>
-          <Link href="/bots" className="rail-btn" title="ربات‌ساز">
+          <button
+            className="rail-btn"
+            title="پیام‌های ذخیره‌شده"
+            onClick={async () => {
+              try {
+                const r = await api<{ chat_id: string }>("/api/saved", { body: {} });
+                await loadChats();
+                await openChat(r.chat_id);
+              } catch (err: any) {
+                toast(err.message, true);
+              }
+            }}
+          >
+            <Icon name="bookmark" size={21} />
+          </button>
+          <Link href="/bots" className="rail-btn rail-optional" title="ربات‌ساز">
             <Icon name="zap" size={22} />
           </Link>
-          <Link href="/docs" className="rail-btn" title="مستندات Bot API">
+          <Link href="/docs" className="rail-btn rail-optional" title="مستندات Bot API">
             <Icon name="book" size={22} />
           </Link>
           <div className="rail-spacer" />
@@ -544,6 +560,7 @@ export default function Messenger({ me: initialMe }: { me: Me }) {
             onForward={(msgs) => setModal({ type: "forward", messages: msgs })}
             onRefreshMeta={() => refreshChatMeta(activeChat.id)}
             reloadChats={loadChats}
+            onMessageUpdated={(m) => setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...m, pending: false } : x)))}
           />
         ) : (
           <div className="chatwrap">

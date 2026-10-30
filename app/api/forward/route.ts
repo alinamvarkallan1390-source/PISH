@@ -6,8 +6,13 @@ import { HttpError, readJson, str, withUser } from "@/lib/http";
 export async function POST(req: Request) {
   return withUser(async (user) => {
     const body = await readJson(req);
-    const messageIds: string[] = Array.isArray(body.message_ids) ? body.message_ids.slice(0, 20) : [];
-    const toIds: string[] = Array.isArray(body.to_chat_ids) ? body.to_chat_ids.slice(0, 20) : [];
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const messageIds: string[] = (Array.isArray(body.message_ids) ? body.message_ids : [])
+      .filter((x: any) => typeof x === "string" && uuid.test(x))
+      .slice(0, 20);
+    const toIds: string[] = (Array.isArray(body.to_chat_ids) ? body.to_chat_ids : [])
+      .filter((x: any) => typeof x === "string" && uuid.test(x))
+      .slice(0, 20);
     if (!messageIds.length || !toIds.length) throw new HttpError(400, "پیام یا مقصد مشخص نیست");
 
     let count = 0;

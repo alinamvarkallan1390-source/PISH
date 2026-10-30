@@ -1,5 +1,5 @@
 import { q, q1 } from "./db";
-import { getMessage, chatById, lastSeq } from "./queries";
+import { getMessage, chatById, lastSeq, chatBots } from "./queries";
 import { builtinReply } from "./builtinBots";
 import { HttpError } from "./http";
 
@@ -63,7 +63,12 @@ export async function sendMessage(opts: SendOptions) {
 
   const message = await getMessage(id, opts.senderId ?? undefined);
 
-  // Deliver to bots
+  // Deliver to bots that live in groups / channels
+  if ((chat.type === "group" || chat.type === "channel") && opts.senderId && !opts.botId) {
+    void deliverToGroupBots(chat, message);
+  }
+
+  // Deliver to a private bot chat
   if (chat.type === "bot" && opts.senderId && !opts.botId) {
     const bot = await q1<any>(`SELECT * FROM nexora_msg.bots WHERE id = $1`, [chat.bot_id]);
     if (bot) {
@@ -197,6 +202,61 @@ export async function toggleReaction(messageId: string, userId: string, emoji: s
       `INSERT INTO nexora_msg.reactions (message_id, user_id, emoji) VALUES ($1,$2,$3)
        ON CONFLICT DO NOTHING`,
       [messageId, userId, emoji]
+    );
+  }
+  return getMessage(messageId, userId);
+}
+
+
+/** Sends a group/channel message to every bot installed in that chat. */
+async function deliverToGroupBots(chat: any, message: any) {
+  try {
+    const bots = await chatBots(chat.id);
+    if (!bots.length) return;
+    const mentioned = bots.filter(
+      (b: any) =>
+        new RegExp(`@${b.username}\\b`, "i").test(message.text || "") ||
+        (message.text || "").trim().startsWith("/")
+    );
+    for (const bot of bots) {
+      if (bot.is_builtin) {
+        if (mentioned.includes(bot)) {
+          const { builtinReply } = await import("./builtinBots");
+          void builtinReply(bot, chat.id, (message.text || "").replace(new RegExp(`@${bot.username}`, "gi"), "").trim(), message);
+        }
+      } else {
+        void dispatchBotUpdate(bot, {
+          type: "message",
+          chat_id: chat.id,
+          chat_type: chat.type,
+          message,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[nexora] group bots", err);
+  }
+}
+
+export async function votePoll(messageId: string, userId: string, optionId: string) {
+  const msg = await q1<any>(`SELECT * FROM nexora_msg.messages WHERE id = $1`, [messageId]);
+  if (!msg) throw new HttpError(404, "نظرسنجی پیدا نشد");
+  const options: any[] = Array.isArray(msg.meta?.options) ? msg.meta.options : [];
+  if (!options.some((o) => o.id === optionId)) throw new HttpError(400, "گزینه نامعتبر است");
+  const current = await q1<any>(
+    `SELECT option_id FROM nexora_msg.poll_votes WHERE message_id = $1 AND user_id = $2`,
+    [messageId, userId]
+  );
+  if (current?.option_id === optionId) {
+    await q(
+      `DELETE FROM nexora_msg.poll_votes WHERE message_id = $1 AND user_id = $2`,
+      [messageId, userId]
+    );
+  } else {
+    await q(
+      `INSERT INTO nexora_msg.poll_votes (message_id, user_id, option_id) VALUES ($1,$2,$3)
+       ON CONFLICT (message_id, user_id) DO UPDATE SET option_id = EXCLUDED.option_id`,
+      [messageId, userId, optionId]
     );
   }
   return getMessage(messageId, userId);

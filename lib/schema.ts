@@ -15,6 +15,12 @@ export const SCHEMA_STATEMENTS: string[] = [
      last_seen timestamptz NOT NULL DEFAULT now(),
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
+  // ---- admin / moderation columns (idempotent migrations) ----
+  `ALTER TABLE nexora_msg.users ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE nexora_msg.users ADD COLUMN IF NOT EXISTS ban_reason text`,
+  `ALTER TABLE nexora_msg.users ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE nexora_msg.users ADD COLUMN IF NOT EXISTS is_verified boolean NOT NULL DEFAULT false`,
+
   `CREATE TABLE IF NOT EXISTS nexora_msg.chats (
      id uuid PRIMARY KEY,
      type text NOT NULL,
@@ -63,6 +69,13 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at timestamptz NOT NULL DEFAULT now(),
      PRIMARY KEY (message_id, user_id, emoji)
    )`,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.poll_votes (
+     message_id uuid NOT NULL REFERENCES nexora_msg.messages(id) ON DELETE CASCADE,
+     user_id uuid NOT NULL,
+     option_id text NOT NULL,
+     created_at timestamptz NOT NULL DEFAULT now(),
+     PRIMARY KEY (message_id, user_id)
+   )`,
   `CREATE TABLE IF NOT EXISTS nexora_msg.media (
      id uuid PRIMARY KEY,
      owner_id uuid,
@@ -93,6 +106,13 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
   `CREATE INDEX IF NOT EXISTS bot_updates_bot_idx ON nexora_msg.bot_updates (bot_id, id)`,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.bot_members (
+     chat_id uuid NOT NULL REFERENCES nexora_msg.chats(id) ON DELETE CASCADE,
+     bot_id uuid NOT NULL,
+     added_by uuid,
+     created_at timestamptz NOT NULL DEFAULT now(),
+     PRIMARY KEY (chat_id, bot_id)
+   )`,
   `CREATE TABLE IF NOT EXISTS nexora_msg.typing (
      chat_id uuid NOT NULL,
      user_id uuid NOT NULL,
@@ -103,6 +123,20 @@ export const SCHEMA_STATEMENTS: string[] = [
      id uuid PRIMARY KEY,
      user_id uuid,
      emoji text NOT NULL,
+     created_at timestamptz NOT NULL DEFAULT now()
+   )`,
+  // ---- platform settings + audit log ----
+  `CREATE TABLE IF NOT EXISTS nexora_msg.settings (
+     key text PRIMARY KEY,
+     value jsonb NOT NULL,
+     updated_at timestamptz NOT NULL DEFAULT now()
+   )`,
+  `CREATE TABLE IF NOT EXISTS nexora_msg.audit_log (
+     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+     actor text NOT NULL DEFAULT 'admin',
+     action text NOT NULL,
+     target text,
+     meta jsonb NOT NULL DEFAULT '{}'::jsonb,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
 ];

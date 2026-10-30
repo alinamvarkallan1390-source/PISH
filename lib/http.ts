@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUserId } from "./auth";
 import { q1 } from "./db";
-import { ensureReady } from "./bootstrap";
+import { ensureReady, getSetting } from "./bootstrap";
 
 export class HttpError extends Error {
   status: number;
@@ -26,6 +26,11 @@ export async function withUser<T>(fn: (user: any) => Promise<T>): Promise<Respon
     if (!uid) return fail(401, "برای ادامه وارد شوید");
     const user = await q1<any>(`SELECT * FROM nexora_msg.users WHERE id = $1`, [uid]);
     if (!user) return fail(401, "حساب کاربری یافت نشد");
+    if (user.is_banned) return fail(403, "حساب شما مسدود شده است");
+    if (!user.is_admin && (await getSetting<boolean>("maintenance_mode"))) {
+      const text = await getSetting<string>("maintenance_text");
+      return fail(503, text || "در حال به‌روزرسانی هستیم");
+    }
     await q1(`UPDATE nexora_msg.users SET last_seen = now() WHERE id = $1`, [uid]);
     const result = await fn(user);
     if (result instanceof Response) return result;

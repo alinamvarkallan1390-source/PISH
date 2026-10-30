@@ -27,13 +27,14 @@ type Props = {
   onForward: (msgs: Msg[]) => void;
   onRefreshMeta: () => void;
   reloadChats: () => void;
+  onMessageUpdated: (m: Msg) => void;
 };
 
 export default function ChatWindow(props: Props) {
   const {
     me, chat, detail, messages, loading, peerReadSeq, typingNames, scrollRef,
     onBack, onSend, onReact, onDelete, onEdit, onPin, onPressButton, onToast,
-    onOpenInfo, onForward,
+    onOpenInfo, onForward, onMessageUpdated,
   } = props;
 
   const [text, setText] = useState("");
@@ -43,6 +44,10 @@ export default function ChatWindow(props: Props) {
   const [pickerTab, setPickerTab] = useState<"emoji" | "sticker">("emoji");
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showPoll, setShowPoll] = useState(false);
+  const [pollQ, setPollQ] = useState("");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -169,6 +174,50 @@ export default function ChatWindow(props: Props) {
     setReplyTo(null);
   }
 
+  async function vote(messageId: string, optionId: string) {
+    try {
+      const res = await api<{ message: Msg }>(`/api/messages/${messageId}/vote`, {
+        body: { option_id: optionId },
+      });
+      onMessageUpdated(res.message);
+    } catch (err: any) {
+      onToast(err.message || "ثبت رأی ناموفق بود", true);
+    }
+  }
+
+  async function saveMessage(messageId: string) {
+    setSavingId(messageId);
+    try {
+      const saved = await api<{ chat_id: string }>("/api/saved", { body: {} });
+      await api("/api/forward", { body: { message_ids: [messageId], to_chat_ids: [saved.chat_id] } });
+      onToast("در پیام‌های ذخیره‌شده ذخیره شد 🔖");
+      props.reloadChats();
+    } catch (err: any) {
+      onToast(err.message, true);
+    } finally {
+      setTimeout(() => setSavingId(null), 900);
+    }
+  }
+
+  async function createPoll() {
+    const question = pollQ.trim();
+    const options = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (question.length < 2) return onToast("صورت نظرسنجی را وارد کنید", true);
+    if (options.length < 2) return onToast("حداقل دو گزینه لازم است", true);
+    await onSend({
+      kind: "poll",
+      text: question,
+      meta: {
+        question,
+        options: options.map((text, i) => ({ id: `o${i + 1}`, text })),
+        anonymous: false,
+      },
+    });
+    setShowPoll(false);
+    setPollQ("");
+    setPollOptions(["", ""]);
+  }
+
   let lastDay = "";
 
   return (
@@ -283,6 +332,9 @@ export default function ChatWindow(props: Props) {
                         <button title="سنجاق" onClick={() => onPin(m.id)}>
                           <Icon name="pin" size={13} />
                         </button>
+                        <button title="ذخیره" onClick={() => saveMessage(m.id)}>
+                          {savingId === m.id ? "✓" : <Icon name="bookmark" size={13} />}
+                        </button>
                         {mine && m.kind === "text" && (
                           <button
                             title="ویرایش"
@@ -333,6 +385,8 @@ export default function ChatWindow(props: Props) {
 
                     {m.deleted ? (
                       <div className="bubble-text">🚫 این پیام حذف شد</div>
+                    ) : m.kind === "poll" ? (
+                      <PollView message={m} meId={me.id} onVote={vote} />
                     ) : isSticker ? (
                       <div className="sticker-big">{m.meta?.emoji || "⭐"}</div>
                     ) : (
@@ -442,6 +496,62 @@ export default function ChatWindow(props: Props) {
         </div>
       ) : (
         <div className="composer" style={{ position: "relative" }}>
+          {showPoll && (
+            <div className="modal" style={{ position: "absolute", bottom: 84, insetInlineStart: 14, width: "min(430px, calc(100% - 28px))", zIndex: 30 }}>
+              <h3>
+                <Icon name="poll" size={17} /> نظرسنجی جدید
+              </h3>
+              <div className="field">
+                <label>سؤال</label>
+                <input
+                  className="input"
+                  placeholder="مثلاً: کدام قابلیت را اول اضافه کنیم؟"
+                  value={pollQ}
+                  onChange={(e) => setPollQ(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label>گزینه‌ها</label>
+                {pollOptions.map((o, i) => (
+                  <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                    <input
+                      className="input"
+                      placeholder={`گزینه ${faNum(i + 1)}`}
+                      value={o}
+                      onChange={(e) =>
+                        setPollOptions((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))
+                      }
+                    />
+                    {pollOptions.length > 2 && (
+                      <button
+                        className="icon-btn"
+                        onClick={() => setPollOptions((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        <Icon name="close" size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {pollOptions.length < 8 && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{ padding: "8px", fontSize: 12.5 }}
+                    onClick={() => setPollOptions((prev) => [...prev, ""])}
+                  >
+                    + افزودن گزینه
+                  </button>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button className="btn btn-ghost" onClick={() => setShowPoll(false)}>
+                  انصراف
+                </button>
+                <button className="btn btn-primary" onClick={createPoll}>
+                  ساخت نظرسنجی
+                </button>
+              </div>
+            </div>
+          )}
           {replyTo && (
             <div className="reply-banner">
               <Icon name="reply" size={15} />
@@ -512,6 +622,9 @@ export default function ChatWindow(props: Props) {
             <div className="composer-tools">
               <button className="icon-btn" title="ایموجی و استیکر" onClick={() => setShowEmoji((s) => !s)}>
                 <Icon name="smile" size={21} />
+              </button>
+              <button className="icon-btn" title="نظرسنجی" onClick={() => setShowPoll(true)}>
+                <Icon name="poll" size={20} />
               </button>
               <button className="icon-btn" title="پیوست فایل" onClick={() => fileRef.current?.click()}>
                 <Icon name="paperclip" size={20} />
@@ -616,6 +729,53 @@ function VoiceNote({ url }: { url: string }) {
       </div>
       <audio ref={ref} src={url} onEnded={() => setPlaying(false)} preload="none" />
       <span style={{ fontSize: 11, opacity: 0.8 }}>صوتی</span>
+    </div>
+  );
+}
+
+
+function PollView({
+  message,
+  meId,
+  onVote,
+}: {
+  message: Msg;
+  meId: string;
+  onVote: (messageId: string, optionId: string) => void;
+}) {
+  const options: { id: string; text: string }[] = Array.isArray(message.meta?.options)
+    ? message.meta.options
+    : [];
+  const votes = message.votes || [];
+  const total = votes.length;
+  const myVote = votes.find((v) => v.user_id === meId)?.option_id;
+  const closed = !!message.meta?.closed;
+
+  return (
+    <div className="poll">
+      <div className="poll-q">{message.meta?.question || message.text || "نظرسنجی"}</div>
+      {options.map((o) => {
+        const count = votes.filter((v) => v.option_id === o.id).length;
+        const pct = total ? Math.round((count / total) * 100) : 0;
+        return (
+          <button
+            key={o.id}
+            className={`poll-option ${myVote === o.id ? "chosen" : ""}`}
+            onClick={() => !closed && onVote(message.id, o.id)}
+          >
+            <span className="fill" style={{ width: `${pct}%` }} />
+            <span>{o.text}</span>
+            <span style={{ opacity: 0.8, fontSize: 12 }}>
+              {myVote === o.id ? "✓ " : ""}
+              {faNum(pct)}%
+            </span>
+          </button>
+        );
+      })}
+      <div className="poll-meta">
+        <Icon name="users" size={13} />
+        {faNum(total)} رأی · {total === 0 ? "اولین نفر باش!" : myVote ? "رأی شما ثبت شد" : "برای رأی دادن کلیک کن"}
+      </div>
     </div>
   );
 }
