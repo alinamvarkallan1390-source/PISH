@@ -68,7 +68,7 @@ async function handle(
           username: bot.username,
           description: bot.description,
           about: bot.about,
-          can_join_groups: false,
+          can_join_groups: true,
           can_read_all_group_messages: false,
         },
       };
