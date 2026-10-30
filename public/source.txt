@@ -1,0 +1,12 @@
+Nexora — full source code
+=========================
+ZIP:  https://nexora-pish.vercel.app/nexora-source.zip
+Git:  https://github.com/alinamvarkallan1390-source/PISH/pull/1
+Raw:  public/nexora-source.zip in the repo (branch arena/460fccb4-pish)
+
+No secrets inside: no .env, no DATABASE_URL, no NEXORA_SECRET, no node_modules.
+
+Run:
+  unzip nexora-source.zip && cd nexora
+  cp .env.example .env.local      # optional
+  npm install && npm run dev
